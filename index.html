@@ -431,11 +431,23 @@
     pointer-events: none;
   }
   .stat-card {
-    background: rgba(255,255,255,0.06);
-    backdrop-filter: blur(40px) saturate(1.4);
-    -webkit-backdrop-filter: blur(40px) saturate(1.4);
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(40px) saturate(1.5) brightness(1.05);
+    -webkit-backdrop-filter: blur(40px) saturate(1.5) brightness(1.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.1);
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute;
+    top: 0; left: -100%; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    animation: glassShimmer 6s ease-in-out infinite;
+  }
+  @keyframes glassShimmer {
+    0%   { left: -100%; }
+    40%  { left: 150%; }
+    100% { left: 150%; }
   }
   .upgrade {
     background: rgba(255,255,255,0.05);
@@ -556,69 +568,148 @@
     pointer-events: none;
     display: flex; align-items: center; justify-content: center;
   }
+
+  /* Crown */
   .acc-crown {
-    position: absolute; top: -40px; font-size: 34px;
-    animation: crownBob 2.5s ease-in-out infinite;
-    filter: drop-shadow(0 0 10px rgba(255,215,0,0.4));
-    text-shadow: 0 0 30px rgba(255,215,0,0.3);
+    position: absolute; top: -56px; font-size: 52px; z-index: 4;
+    animation: crownFloat 3.2s ease-in-out infinite;
+    filter:
+      drop-shadow(0 0 10px rgba(255,215,0,1))
+      drop-shadow(0 0 28px rgba(255,180,0,0.7))
+      drop-shadow(0 0 55px rgba(255,140,0,0.35));
   }
-  @keyframes crownBob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+  @keyframes crownFloat {
+    0%,100% { transform: translateY(0) rotate(-4deg) scale(1); }
+    45%     { transform: translateY(-16px) rotate(4deg) scale(1.08); }
   }
+
+  /* Halo */
   .acc-halo {
-    width: 250px; height: 50px; border-radius: 50%;
-    border: 2px solid var(--acc-color, rgba(100,180,255,0.2));
-    box-shadow: 0 0 30px var(--acc-glow, rgba(100,180,255,0.1)), 0 0 60px var(--acc-glow, rgba(100,180,255,0.05));
-    animation: haloSpin 6s linear infinite;
+    width: 234px; height: 47px; border-radius: 50%;
+    border: 3px solid var(--acc-color, rgba(100,180,255,0.55));
+    box-shadow:
+      0 0 18px var(--acc-glow, rgba(100,180,255,0.4)),
+      0 0 45px var(--acc-glow, rgba(100,180,255,0.2)),
+      0 0 80px var(--acc-glow, rgba(100,180,255,0.08)),
+      inset 0 0 14px var(--acc-glow, rgba(100,180,255,0.12));
+    animation: haloSpin 5s linear infinite;
     transform: rotateX(75deg);
+    position: relative;
+  }
+  .acc-halo::before {
+    content: ''; position: absolute; inset: 5px; border-radius: 50%;
+    border: 1px solid var(--acc-color, rgba(100,180,255,0.28));
+    box-shadow: inset 0 0 8px var(--acc-glow, rgba(100,180,255,0.1));
   }
   @keyframes haloSpin {
-    0% { transform: rotateX(75deg) rotateZ(0deg); }
+    0%   { transform: rotateX(75deg) rotateZ(0deg); }
     100% { transform: rotateX(75deg) rotateZ(360deg); }
+  }
+
+  /* Moon */
+  .acc-orbit-trail {
+    position: absolute; left: 50%; top: 50%;
+    width: 228px; height: 228px; margin: -114px 0 0 -114px;
+    border-radius: 50%;
+    border: 1px solid rgba(180,210,255,0.07);
+    pointer-events: none;
   }
   .acc-moon {
-    width: 14px; height: 14px; border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #ddd, #888);
-    box-shadow: 0 0 10px rgba(200,200,200,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f0f2ff, #c0c8e0 45%, #808898);
+    box-shadow: 0 0 16px rgba(200,220,255,0.75), inset 0 -3px 7px rgba(0,0,0,0.45);
     position: absolute; left: 50%; top: 50%;
-    animation: moonOrbit 6s linear infinite;
+    animation: moonOrbit 5s linear infinite;
+    z-index: 2;
   }
-  .acc-moon::after {
-    content: ''; position: absolute; top: 2px; left: 3px;
-    width: 4px; height: 4px; border-radius: 50%;
-    background: rgba(255,255,255,0.4);
+  .acc-moon::before {
+    content: ''; position: absolute; top: 3px; left: 5px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    box-shadow: 8px 5px 0 -1px rgba(255,255,255,0.2);
   }
   @keyframes moonOrbit {
-    0% { transform: translate(-50%, -50%) rotate(0deg) translateX(110px) rotate(0deg); }
-    100% { transform: translate(-50%, -50%) rotate(360deg) translateX(110px) rotate(-360deg); }
+    0%   { transform: translate(-50%,-50%) rotate(0deg)   translateX(114px) rotate(0deg); }
+    100% { transform: translate(-50%,-50%) rotate(360deg) translateX(114px) rotate(-360deg); }
   }
-  .acc-dual {
-    width: 260px; height: 50px;
-    border: 2px solid var(--acc-color, rgba(100,180,255,0.15));
-    border-radius: 50%; position: absolute;
-    transform: rotateX(75deg) rotateZ(0deg);
-    animation: dualSpin 8s linear infinite;
+
+  /* Dual rings */
+  .acc-ring-outer {
+    width: 272px; height: 54px; border-radius: 50%; position: absolute;
+    border: 2px solid var(--acc-color, rgba(100,180,255,0.45));
+    box-shadow:
+      0 0 20px var(--acc-glow, rgba(100,180,255,0.25)),
+      inset 0 0 10px var(--acc-glow, rgba(100,180,255,0.08));
+    animation: outerRingSpin 7s linear infinite;
   }
-  .acc-dual::after {
-    content: ''; position: absolute; inset: 12px;
-    border: 2px solid var(--acc-color, rgba(100,180,255,0.12));
-    border-radius: 50%; opacity: 0.7;
-  }
-  @keyframes dualSpin {
-    0% { transform: rotateX(75deg) rotateZ(0deg); }
+  @keyframes outerRingSpin {
+    0%   { transform: rotateX(75deg) rotateZ(0deg); }
     100% { transform: rotateX(75deg) rotateZ(360deg); }
   }
+  .acc-ring-inner {
+    width: 198px; height: 40px; border-radius: 50%; position: absolute;
+    border: 2px solid var(--acc-color, rgba(100,180,255,0.32));
+    box-shadow: 0 0 14px var(--acc-glow, rgba(100,180,255,0.18));
+    animation: innerRingSpin 4s linear infinite reverse;
+  }
+  @keyframes innerRingSpin {
+    0%   { transform: rotateX(75deg) rotateZ(0deg); }
+    100% { transform: rotateX(75deg) rotateZ(360deg); }
+  }
+
+  /* Accretion disk */
   .acc-disk {
-    width: 300px; height: 40px; border-radius: 50%;
-    background: linear-gradient(90deg, transparent, var(--acc-glow, rgba(100,180,255,0.1)), var(--acc-color, rgba(100,180,255,0.2)), var(--acc-glow, rgba(100,180,255,0.1)), transparent);
-    box-shadow: 0 0 40px var(--acc-glow, rgba(100,180,255,0.08));
-    animation: diskSpin 3s linear infinite;
+    width: 314px; height: 46px; border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0%,
+      var(--acc-glow, rgba(100,180,255,0.06)) 12%,
+      var(--acc-color, rgba(100,180,255,0.28)) 22%,
+      rgba(255,255,255,0.18) 28%,
+      var(--acc-color, rgba(100,180,255,0.28)) 34%,
+      var(--acc-glow, rgba(100,180,255,0.06)) 48%,
+      transparent 58%,
+      var(--acc-glow, rgba(100,180,255,0.04)) 72%,
+      var(--acc-color, rgba(100,180,255,0.16)) 84%,
+      transparent 100%
+    );
+    box-shadow: 0 0 35px var(--acc-glow, rgba(100,180,255,0.15));
+    animation: diskSpin 2.4s linear infinite;
     transform: rotateX(75deg);
   }
   @keyframes diskSpin {
-    0% { transform: rotateX(75deg) rotateZ(0deg); }
+    0%   { transform: rotateX(75deg) rotateZ(0deg); }
     100% { transform: rotateX(75deg) rotateZ(360deg); }
+  }
+
+  /* v2 locked tab */
+  .v2-tab {
+    position: relative; overflow: visible;
+    opacity: 0.45; cursor: default;
+  }
+  .v2-tab::after {
+    content: 'SOON'; position: absolute; top: -8px; right: -2px;
+    font-size: 7px; font-weight: 800; letter-spacing: 0.8px;
+    background: linear-gradient(135deg, #ff6b6b, #ff4444);
+    color: #fff; padding: 2px 5px; border-radius: 5px;
+    pointer-events: none; box-shadow: 0 2px 8px rgba(255,80,80,0.4);
+  }
+  .v2-content {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 28px 16px; text-align: center; gap: 10px;
+  }
+  .v2-content .v2-icon { font-size: 44px; filter: grayscale(0.3); }
+  .v2-content .v2-title {
+    font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.7);
+  }
+  .v2-content .v2-sub {
+    font-size: 12px; color: rgba(255,255,255,0.3); max-width: 220px; line-height: 1.5;
+  }
+  .v2-content .v2-badge {
+    margin-top: 4px; padding: 6px 16px; border-radius: 20px;
+    background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.2);
+    font-size: 11px; font-weight: 700; color: rgba(255,120,120,0.7);
+    letter-spacing: 1px; text-transform: uppercase;
   }
 
   /* Accessories UI in skins tab */
@@ -742,11 +833,20 @@
     <div class="panel-tab" data-tab="leaders">🏆 Лидеры</div>
     <div class="panel-tab" data-tab="skins">🎨 Скины</div>
     <div class="panel-tab" data-tab="accs">💎 Аксессуары</div>
+    <div class="panel-tab v2-tab" data-tab="v2">🔒 v2</div>
   </div>
   <div class="upgrades-list" id="upgradesList"></div>
   <div class="upgrades-list" id="leadersList" style="display:none;"></div>
   <div class="skin-grid" id="skinsList" style="display:none;"></div>
   <div class="acc-tab-content" id="accTabContent" style="display:none;"></div>
+  <div class="acc-tab-content" id="v2Content" style="display:none;">
+    <div class="v2-content">
+      <div class="v2-icon">🚀</div>
+      <div class="v2-title">Версия 2</div>
+      <div class="v2-sub">Новые планеты, мультиплеер, события и многое другое</div>
+      <div class="v2-badge">В следующем обновлении</div>
+    </div>
+  </div>
 </div>
 
 </div> <!-- game-container -->
@@ -856,13 +956,22 @@ function spawnParticle(x, y, amount, boosted) {
   el.className = 'click-particle';
   el.style.left = (x - 25) + 'px';
   el.style.top = (y - 10) + 'px';
-  el.style.color = boosted ? '#00ff88' : '#ffd700';
-  el.innerHTML = (boosted ? '⚡' : '') + '+' + amount + '<span class="sub">' + (boosted ? '×2' : 'пыль') + '</span>';
+
+  let text, sub;
+  if (typeof amount === 'number') {
+    el.style.color = boosted ? '#00ff88' : '#ffd700';
+    text = (boosted ? '⚡' : '') + '+' + formatNum(amount);
+    sub = boosted ? '×2' : 'пыль';
+  } else {
+    el.style.color = '#ffffff';
+    text = amount;
+    sub = '';
+  }
+  el.innerHTML = text + (sub ? `<span class="sub">${sub}</span>` : '');
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 900);
 
-  // extra mini particles for boost
-  if (boosted) {
+  if (boosted && typeof amount === 'number') {
     for (let i = 0; i < 4; i++) {
       const p = document.createElement('div');
       p.className = 'boost-particle';
@@ -1124,39 +1233,56 @@ function applyAccessory(id) {
   }
 
   const skin = SKINS.find(s => s.id === activeSkin);
-  const accColor = skin ? skin.glow.replace('0.25', '0.3') : 'rgba(74,144,217,0.3)';
-  const accGlow = skin ? skin.glow.replace('0.25', '0.12') : 'rgba(74,144,217,0.12)';
-
-  const el = document.createElement('div');
+  const accColor = skin ? skin.glow.replace('0.25', '0.45') : 'rgba(74,144,217,0.45)';
+  const accGlow  = skin ? skin.glow.replace('0.25', '0.18') : 'rgba(74,144,217,0.18)';
 
   switch (id) {
-    case 'crown':
+    case 'crown': {
+      const el = document.createElement('div');
       el.className = 'acc-crown';
       el.textContent = '👑';
-      el.style.setProperty('--acc-color', accColor);
-      el.style.setProperty('--acc-glow', accGlow);
+      layer.appendChild(el);
       break;
-    case 'halo':
+    }
+    case 'halo': {
+      const el = document.createElement('div');
       el.className = 'acc-halo';
       el.style.setProperty('--acc-color', accColor);
       el.style.setProperty('--acc-glow', accGlow);
+      layer.appendChild(el);
       break;
-    case 'moon':
-      el.className = 'acc-moon';
+    }
+    case 'moon': {
+      const trail = document.createElement('div');
+      trail.className = 'acc-orbit-trail';
+      layer.appendChild(trail);
+      const moon = document.createElement('div');
+      moon.className = 'acc-moon';
+      layer.appendChild(moon);
       break;
-    case 'dual':
-      el.className = 'acc-dual';
-      el.style.setProperty('--acc-color', accColor);
-      el.style.setProperty('--acc-glow', accGlow);
+    }
+    case 'dual': {
+      const outer = document.createElement('div');
+      outer.className = 'acc-ring-outer';
+      outer.style.setProperty('--acc-color', accColor);
+      outer.style.setProperty('--acc-glow', accGlow);
+      layer.appendChild(outer);
+      const inner = document.createElement('div');
+      inner.className = 'acc-ring-inner';
+      inner.style.setProperty('--acc-color', accColor);
+      inner.style.setProperty('--acc-glow', accGlow);
+      layer.appendChild(inner);
       break;
-    case 'disk':
+    }
+    case 'disk': {
+      const el = document.createElement('div');
       el.className = 'acc-disk';
-      el.style.setProperty('--acc-color', accColor.replace('0.3', '0.2'));
+      el.style.setProperty('--acc-color', accColor.replace('0.45', '0.28'));
       el.style.setProperty('--acc-glow', accGlow);
+      layer.appendChild(el);
       break;
+    }
   }
-
-  layer.appendChild(el);
   localStorage.setItem('sd_accessory', id);
 }
 
@@ -1174,7 +1300,8 @@ document.querySelectorAll('.panel-tab').forEach(tab => {
     document.getElementById('leadersList').style.display = currentTab === 'leaders' ? '' : 'none';
     document.getElementById('skinsList').style.display = currentTab === 'skins' ? '' : 'none';
     document.getElementById('accTabContent').style.display = currentTab === 'accs' ? '' : 'none';
-    const titles = { upgrades: '🛸 Улучшения', leaders: '🏆 Лидеры', skins: '🎨 Скины', accs: '💎 Аксессуары' };
+    document.getElementById('v2Content').style.display = currentTab === 'v2' ? '' : 'none';
+    const titles = { upgrades: '🛸 Улучшения', leaders: '🏆 Лидеры', skins: '🎨 Скины', accs: '💎 Аксессуары', v2: '🔒 Версия 2' };
     document.getElementById('panelTitle').textContent = titles[currentTab] || '🛸 Улучшения';
     if (currentTab === 'leaders') renderLeaders();
     if (currentTab === 'skins') {
