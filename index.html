@@ -2159,18 +2159,30 @@ document.getElementById('bgCanvas').addEventListener('touchmove', e => e.prevent
 
 // ====== SWIPE TABS ======
 const TAB_ORDER = ['upgrades', 'shop', 'leaders', 'skins', 'accs', 'v2'];
-let _swipeStartX = 0, _swipeStartY = 0;
+let _swipeStartX = 0, _swipeStartY = 0, _swipeBlocked = false;
 const _panel = document.getElementById('bottomPanel');
+
+function _isInsideHScrollable(el) {
+  while (el && el !== _panel) {
+    const style = window.getComputedStyle(el);
+    const overflow = style.overflowX;
+    if ((overflow === 'auto' || overflow === 'scroll') && el.scrollWidth > el.clientWidth + 2) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
 
 _panel.addEventListener('touchstart', e => {
   _swipeStartX = e.touches[0].clientX;
   _swipeStartY = e.touches[0].clientY;
+  _swipeBlocked = _isInsideHScrollable(e.target);
 }, { passive: true });
 
 _panel.addEventListener('touchend', e => {
+  if (_swipeBlocked) return;
   const dx = e.changedTouches[0].clientX - _swipeStartX;
   const dy = e.changedTouches[0].clientY - _swipeStartY;
-  if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
   const idx = TAB_ORDER.indexOf(currentTab);
   let next = idx + (dx < 0 ? 1 : -1);
   if (next < 0 || next >= TAB_ORDER.length) return;
