@@ -519,7 +519,7 @@
   }
   .skin-card:active { transform: scale(0.95); }
   .skin-card.active { border-color: #ffd700; background: rgba(255,215,0,0.06); }
-  .skin-card.locked { opacity: 0.3; }
+  .skin-card.locked { opacity: 0.85; }
   .skin-planet {
     width: 60px; height: 60px; border-radius: 50%;
     margin: 0 auto 8px;
@@ -531,6 +531,7 @@
   .skin-status { font-size: 9px; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
   .skin-status.active-skin { color: #ffd700; }
   .skin-status.locked-status { color: rgba(255,255,255,0.2); }
+  .skin-status.spin-status { color: var(--rc, #4e9eff); font-size: 10px; letter-spacing: 0.5px; }
 
   /* ---- ENHANCED GLOW ---- */
   @keyframes glowPulse {
@@ -1049,7 +1050,7 @@ UPGRADES.forEach(u => bought[u.id] = 0);
 
 // ====== SAVE/LOAD ======
 function saveGame() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ dust, totalClicks, bought, shopInventory, ts: Date.now() })); } catch(e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ dust, totalClicks, bought, shopInventory, skinInventory, ts: Date.now() })); } catch(e) {}
 }
 function loadGame() {
   try {
@@ -1060,6 +1061,7 @@ function loadGame() {
     totalClicks = d.totalClicks || 0;
     if (d.bought) Object.keys(d.bought).forEach(k => { if (bought[k] !== undefined) bought[k] = d.bought[k]; });
     if (d.shopInventory) Object.assign(shopInventory, d.shopInventory);
+    if (d.skinInventory) Object.assign(skinInventory, d.skinInventory);
     recalcStats();
     if (d.ts && autoRate > 0) {
       const elapsed = Math.min((Date.now() - d.ts) / 1000, 3600);
@@ -1291,25 +1293,32 @@ function renderLeaders() {
 
 // ====== SKINS ======
 const SKINS = [
-  { id: 'blue', name: 'Голубая планета', desc: 'Классика',
+  { id: 'blue', name: 'Голубая планета', desc: 'Стартовая',
     gradient: 'radial-gradient(circle at 35% 35%, #7ec8ff, #4a90d9 35%, #2a5a8a 60%, #0d2647 80%, #050e1f)',
-    ring: 'rgba(100,180,255,0.15)', glow: 'rgba(74,144,217,0.25)', glow2: 'rgba(74,144,217,0.06)', unlock: 0 },
-  { id: 'red', name: 'Марсианская', desc: '1000 кликов',
+    ring: 'rgba(100,180,255,0.15)', glow: 'rgba(74,144,217,0.25)', glow2: 'rgba(74,144,217,0.06)', unlock: 0,
+    rarity: 'common', spinCost: null, chance: null },
+  { id: 'red', name: 'Марсианская', desc: 'Огненная планета',
     gradient: 'radial-gradient(circle at 30% 30%, #ff7a5a, #d94a2a 35%, #8a2a0a 60%, #4a1005 80%, #1a0505)',
-    ring: 'rgba(255,80,50,0.15)', glow: 'rgba(200,60,40,0.25)', glow2: 'rgba(200,60,40,0.06)', unlock: 1000 },
-  { id: 'gold', name: 'Золотая', desc: '5000 кликов',
+    ring: 'rgba(255,80,50,0.15)', glow: 'rgba(200,60,40,0.25)', glow2: 'rgba(200,60,40,0.06)', unlock: 0,
+    rarity: 'common', spinCost: 450, chance: 45 },
+  { id: 'gold', name: 'Золотая', desc: 'Планета из золота',
     gradient: 'radial-gradient(circle at 35% 35%, #ffec6a, #ffc82a 35%, #c88a00 60%, #6a4a00 80%, #2a1a00)',
-    ring: 'rgba(255,215,0,0.2)', glow: 'rgba(255,215,0,0.25)', glow2: 'rgba(255,200,0,0.08)', unlock: 5000 },
-  { id: 'green', name: 'Инопланетная', desc: '15000 кликов',
+    ring: 'rgba(255,215,0,0.2)', glow: 'rgba(255,215,0,0.25)', glow2: 'rgba(255,200,0,0.08)', unlock: 0,
+    rarity: 'rare', spinCost: 1600, chance: 32 },
+  { id: 'green', name: 'Инопланетная', desc: 'Из другой галактики',
     gradient: 'radial-gradient(circle at 35% 35%, #6affaa, #2ab86a 35%, #1a7a3a 60%, #0a3a1a 80%, #051a0a)',
-    ring: 'rgba(74,255,138,0.12)', glow: 'rgba(26,200,100,0.25)', glow2: 'rgba(26,200,100,0.06)', unlock: 15000 },
-  { id: 'purple', name: 'Туманность', desc: '50000 кликов',
+    ring: 'rgba(74,255,138,0.12)', glow: 'rgba(26,200,100,0.25)', glow2: 'rgba(26,200,100,0.06)', unlock: 0,
+    rarity: 'epic', spinCost: 5000, chance: 20 },
+  { id: 'purple', name: 'Туманность', desc: 'Дух Вселенной',
     gradient: 'radial-gradient(circle at 35% 35%, #d4a0ff, #8a3acc 35%, #5a1a8a 60%, #2a0a4a 80%, #150526)',
-    ring: 'rgba(150,100,255,0.15)', glow: 'rgba(124,58,237,0.25)', glow2: 'rgba(124,58,237,0.06)', unlock: 50000 },
-  { id: 'dark', name: 'Чёрная дыра', desc: '200000 кликов',
+    ring: 'rgba(150,100,255,0.15)', glow: 'rgba(124,58,237,0.25)', glow2: 'rgba(124,58,237,0.06)', unlock: 0,
+    rarity: 'legendary', spinCost: 15000, chance: 12 },
+  { id: 'dark', name: 'Чёрная дыра', desc: 'Поглощает всё',
     gradient: 'radial-gradient(circle at 35% 35%, #667, #334 35%, #111 60%, #050505 80%, #000)',
-    ring: 'rgba(200,0,255,0.1)', glow: 'rgba(100,0,150,0.2)', glow2: 'rgba(100,0,150,0.05)', unlock: 200000 },
+    ring: 'rgba(200,0,255,0.1)', glow: 'rgba(100,0,150,0.2)', glow2: 'rgba(100,0,150,0.05)', unlock: 0,
+    rarity: 'mythic', spinCost: 80000, chance: null },
 ];
+const skinInventory = { blue: true };
 
 let activeSkin = 'blue';
 
@@ -1340,23 +1349,49 @@ function renderSkins() {
   const grid = document.getElementById('skinsList');
   grid.innerHTML = '';
   SKINS.forEach(s => {
-    const unlocked = totalClicks >= s.unlock;
+    const owned = !!skinInventory[s.id];
     const isActive = activeSkin === s.id;
+    const ri = RARITY_INFO[s.rarity] || RARITY_INFO.common;
     const div = document.createElement('div');
-    div.className = 'skin-card' + (isActive ? ' active' : '') + (!unlocked ? ' locked' : '');
+    div.className = 'skin-card' + (isActive ? ' active' : '') + (!owned ? ' locked' : '');
+    div.style.setProperty('--rc', ri.color);
+
+    let statusHtml;
+    if (isActive) {
+      statusHtml = `<div class="skin-status active-skin">✓ активно</div>`;
+    } else if (owned) {
+      statusHtml = `<div class="skin-status">выбрать</div>`;
+    } else if (s.spinCost === null) {
+      statusHtml = `<div class="skin-status locked-status">👆 ${formatNum(s.chance ? s.spinCost : 80000)} купить</div>`;
+    } else {
+      statusHtml = `<div class="skin-status spin-status">🎰 ${s.chance}% — 👆${formatNum(s.spinCost)}</div>`;
+    }
 
     div.innerHTML = `
       <div class="skin-planet" style="background:${s.gradient};box-shadow:0 0 20px ${s.glow};"></div>
-      <div class="skin-name">${s.name}</div>
+      <div class="skin-name" style="color:${ri.color}">${s.name}</div>
       <div class="skin-desc">${s.desc}</div>
-      <div class="skin-status ${isActive ? 'active-skin' : ''} ${!unlocked ? 'locked-status' : ''}">${isActive ? '✓ активно' : !unlocked ? '🔒 закр' : 'выбрать'}</div>
+      ${statusHtml}
     `;
 
-    if (unlocked && !isActive) {
-      div.addEventListener('click', () => applySkin(s.id));
-    }
+    div.addEventListener('click', () => {
+      if (isActive) return;
+      if (owned) { applySkin(s.id); renderSkins(); return; }
+      openSkinModal(s);
+    });
     grid.appendChild(div);
   });
+}
+
+function openSkinModal(skin) {
+  const pseudo = {
+    id: skin.id, name: skin.name, type: 'skin',
+    rarity: skin.rarity, cost: skin.spinCost || 80000,
+    icon: '🌍', _skinId: skin.id,
+    gradient: skin.gradient, ring: skin.ring, glow: skin.glow, glow2: skin.glow2,
+  };
+  if (skin.chance === null) pseudo.rarity = 'mythic';
+  openUpgradeModal(pseudo);
 }
 
 function renderAccTab() {
@@ -1529,6 +1564,7 @@ document.querySelectorAll('.panel-tab').forEach(tab => {
       }
     }
     if (currentTab === 'accs') renderAccTab();
+    tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   });
 });
 
@@ -1905,8 +1941,8 @@ let _upgradeItem = null, _upgradeSpinning = false;
 
 function openUpgradeModal(item) {
   const ri = RARITY_INFO[item.rarity];
-  const owned = !!shopInventory[item.id];
-  const upgCost = getUpgradeCost(item);
+  const owned = item._skinId ? !!skinInventory[item._skinId] : !!shopInventory[item.id];
+  const upgCost = item._skinId ? item.cost : getUpgradeCost(item);
   _upgradeItem = item;
   _upgradeSpinning = false;
 
@@ -1919,8 +1955,13 @@ function openUpgradeModal(item) {
   document.getElementById('umName').textContent = item.name;
   document.getElementById('umRarity').textContent = ri.name;
 
+  // For base skins, use per-skin chance; for shop items use rarity chance
+  const displayChance = item._skinId
+    ? (SKINS.find(s => s.id === item._skinId) || {}).chance
+    : ri.chance;
+
   const chEl = document.getElementById('umChance');
-  chEl.textContent = ri.chance !== null ? ri.chance + '%' : '—';
+  chEl.textContent = displayChance != null ? displayChance + '%' : '—';
   chEl.style.color = ri.color;
 
   const resultEl = document.getElementById('umResult');
@@ -1933,9 +1974,23 @@ function openUpgradeModal(item) {
   if (owned) {
     buyBtn.textContent = '✓ Уже получено';
     buyBtn.disabled = true;
-    upgBtn.textContent = '✓ Уже получено';
-    upgBtn.disabled = true;
+    upgBtn.style.display = 'none';
+  } else if (item._skinId) {
+    // Skin spinning: hide buy, show spin button
+    buyBtn.style.display = 'none';
+    if (displayChance != null) {
+      upgBtn.textContent = `🎰 Спин ${displayChance}% — 👆${formatNum(item.cost)}`;
+      upgBtn.disabled = totalClicks < item.cost;
+      upgBtn.style.display = '';
+    } else {
+      // mythic skin: direct buy only
+      buyBtn.style.display = '';
+      buyBtn.textContent = `Купить — 👆${formatNum(item.cost)}`;
+      buyBtn.disabled = totalClicks < item.cost;
+      upgBtn.style.display = 'none';
+    }
   } else {
+    buyBtn.style.display = '';
     const canBuy = totalClicks >= item.cost;
     buyBtn.textContent = `Купить — 👆${formatNum(item.cost)}`;
     buyBtn.disabled = !canBuy;
@@ -1949,17 +2004,18 @@ function openUpgradeModal(item) {
     }
   }
 
-  buildReel(item, ri);
+  const skinForReel = item._skinId ? SKINS.find(s => s.id === item._skinId) : null;
+  buildReel(item, ri, skinForReel ? skinForReel.chance : ri.chance);
   document.getElementById('upgradeOverlay').classList.add('show');
 }
 
-function buildReel(item, ri) {
+function buildReel(item, ri, overrideChance) {
   const reel = document.getElementById('umReel');
   reel.innerHTML = '';
   reel.style.transition = 'none';
   reel.style.transform = 'translateY(0)';
-  const icon = item.icon || SHOP_ACC_ICONS[item.id] || '?';
-  const chance = ri.chance ?? 0;
+  const icon = item._skinId ? '🌍' : (item.icon || SHOP_ACC_ICONS[item.id] || '?');
+  const chance = overrideChance ?? ri.chance ?? 0;
   const total = 32;
   const wins = Math.round(total * chance / 100);
   const fails = total - wins;
@@ -1984,14 +2040,16 @@ function buildReel(item, ri) {
 function doUpgrade(item) {
   if (_upgradeSpinning) return;
   const ri = RARITY_INFO[item.rarity];
-  const upgCost = getUpgradeCost(item);
-  if (!upgCost || totalClicks < upgCost) return;
+  const skinObj = item._skinId ? SKINS.find(s => s.id === item._skinId) : null;
+  const spinChance = skinObj ? skinObj.chance : ri.chance;
+  const upgCost = item._skinId ? item.cost : getUpgradeCost(item);
+  if (!upgCost || !spinChance || totalClicks < upgCost) return;
   _upgradeSpinning = true;
   totalClicks -= upgCost;
   document.getElementById('umBuyBtn').disabled = true;
   document.getElementById('umUpgBtn').disabled = true;
 
-  const isWin = Math.random() * 100 < ri.chance;
+  const isWin = Math.random() * 100 < spinChance;
   const reel = document.getElementById('umReel');
   const items = Array.from(reel.children);
   const ITEM_H = 44;
@@ -2008,8 +2066,7 @@ function doUpgrade(item) {
     _upgradeSpinning = false;
     const resultEl = document.getElementById('umResult');
     if (isWin) {
-      shopInventory[item.id] = true;
-      applyShopItem(item);
+      _grantItem(item);
       saveGame();
       resultEl.textContent = '🎉 ПОБЕДА! ' + item.name + ' получен!';
       resultEl.className = 'um-result win show';
@@ -2022,19 +2079,28 @@ function doUpgrade(item) {
       document.getElementById('umUpgBtn').disabled = totalClicks < (upgCost2 || Infinity);
     }
     updateUI();
-    renderShop();
+    if (item._skinId) renderSkins(); else renderShop();
   }, 3300);
 }
 
 function doBuy(item) {
-  if (totalClicks < item.cost || shopInventory[item.id]) return;
+  const alreadyOwned = item._skinId ? skinInventory[item._skinId] : shopInventory[item.id];
+  if (totalClicks < item.cost || alreadyOwned) return;
   totalClicks -= item.cost;
-  shopInventory[item.id] = true;
-  applyShopItem(item);
+  _grantItem(item);
   saveGame();
   updateUI();
-  renderShop();
-  openUpgradeModal(item);
+  if (item._skinId) { renderSkins(); openUpgradeModal(item); } else { renderShop(); openUpgradeModal(item); }
+}
+
+function _grantItem(item) {
+  if (item._skinId) {
+    skinInventory[item._skinId] = true;
+    applySkin(item._skinId);
+  } else {
+    shopInventory[item.id] = true;
+    applyShopItem(item);
+  }
 }
 
 function applyShopItem(item) {
@@ -2090,6 +2156,30 @@ if (savedAcc && (allAccIds.includes(savedAcc) || savedAcc === 'none')) applyAcce
 // Block touchmove only on game area, not on scrollable panels
 document.getElementById('clickArea').addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 document.getElementById('bgCanvas').addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+// ====== SWIPE TABS ======
+const TAB_ORDER = ['upgrades', 'shop', 'leaders', 'skins', 'accs', 'v2'];
+let _swipeStartX = 0, _swipeStartY = 0;
+const _panel = document.getElementById('bottomPanel');
+
+_panel.addEventListener('touchstart', e => {
+  _swipeStartX = e.touches[0].clientX;
+  _swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+
+_panel.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - _swipeStartX;
+  const dy = e.changedTouches[0].clientY - _swipeStartY;
+  if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  const idx = TAB_ORDER.indexOf(currentTab);
+  let next = idx + (dx < 0 ? 1 : -1);
+  if (next < 0 || next >= TAB_ORDER.length) return;
+  const targetTab = document.querySelector(`.panel-tab[data-tab="${TAB_ORDER[next]}"]`);
+  if (targetTab) {
+    targetTab.click();
+    targetTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}, { passive: true });
 </script>
 </body>
 </html>
