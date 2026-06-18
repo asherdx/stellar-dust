@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Stellar Dust</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #060612; color: #fff; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden; height: 100dvh; width: 100vw; touch-action: none;
+    display: flex; flex-direction: column;
+  }
+
+  /* ---- CANVAS LAYERS ---- */
+  #bgCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  #fxCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+
+  /* ---- TOP BAR ---- */
+  .top-bar {
+    position: relative; z-index: 5; padding: 16px 16px 8px;
+    display: flex; gap: 10px; justify-content: space-between;
+  }
+  .stat-card {
+    flex: 1; background: rgba(255,255,255,0.04); backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 18px; padding: 12px 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    transition: border-color 0.3s;
+  }
+  .stat-card .label {
+    font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.35);
+    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px;
+  }
+  .stat-card .value {
+    font-size: 26px; font-weight: 800;
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: transform 0.1s;
+  }
+  .stat-card .sub {
+    font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 1px;
+    font-weight: 400;
+  }
+  .stat-card.right { text-align: right; }
+  .stat-card.right .value {
+    font-size: 20px;
+    background: linear-gradient(135deg, #7ecfff, #4a90d9);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ---- PLANET AREA ---- */
+  .center-area {
+    position: relative; z-index: 5; flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    overflow: visible;
+  }
+
+  .planet-wrap {
+    position: relative; width: 200px; height: 200px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .planet-glow {
+    position: absolute; width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(74,144,217,0.15) 0%, rgba(100,50,200,0.05) 50%, transparent 70%);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.15); opacity: 1; }
+  }
+
+  .planet {
+    width: 170px; height: 170px; border-radius: 50%;
+    position: relative; cursor: pointer; z-index: 2;
+    touch-action: none; transition: transform 0.06s;
+  }
+  .planet:active { transform: scale(0.90); }
+
+  .planet .sphere {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #6ab0ff, #2a6ab0 40%, #0d2647 75%, #050e1f);
+    box-shadow:
+      0 0 80px rgba(74,144,217,0.25),
+      0 0 160px rgba(74,144,217,0.08),
+      inset 0 -30px 60px rgba(0,0,0,0.5);
+    position: relative; overflow: hidden;
+    animation: planetSpin 30s linear infinite;
+  }
+  @keyframes planetSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .planet .sphere .surface {
+    position: absolute; inset: 0; border-radius: 50%;
+    background:
+      radial-gradient(ellipse 60% 30% at 20% 60%, rgba(100,180,255,0.08), transparent),
+      radial-gradient(ellipse 40% 20% at 70% 30%, rgba(50,200,150,0.06), transparent),
+      radial-gradient(ellipse 50% 25% at 50% 80%, rgba(200,150,255,0.05), transparent);
+  }
+  .planet .sphere .crater {
+    position: absolute; border-radius: 50%;
+    background: rgba(0,0,0,0.15);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .planet .sphere .crater:nth-child(2) { width: 24px; height: 18px; top: 55px; left: 40px; transform: rotate(-10deg); }
+  .planet .sphere .crater:nth-child(3) { width: 16px; height: 12px; top: 100px; left: 80px; transform: rotate(15deg); }
+  .planet .sphere .crater:nth-child(4) { width: 12px; height: 9px; top: 30px; left: 95px; }
+  .planet .sphere .crater:nth-child(5) { width: 8px; height: 6px; top: 75px; left: 115px; }
+  .planet .sphere .crater:nth-child(6) { width: 18px; height: 14px; top: 120px; left: 50px; transform: rotate(5deg); }
+
+  /* Atmosphere rim */
+  .planet .atmo {
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid rgba(100,180,255,0.1);
+    box-shadow: 0 0 30px rgba(100,180,255,0.1);
+    pointer-events: none;
+  }
+
+  /* Ring */
+  .planet .ring {
+    position: absolute; top: 50%; left: 50%; width: 280px; height: 50px;
+    transform: translate(-50%, -50%) rotateX(75deg) rotateZ(15deg);
+    border: 2px solid rgba(150,200,255,0.12);
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 20px rgba(100,180,255,0.05);
+  }
+  .planet .ring::after {
+    content: ''; position: absolute; inset: -2px; border-radius: 50%;
+    border: 1px solid rgba(150,200,255,0.05);
+  }
+
+  .boost-badge {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 13px; font-weight: 700; color: #00ff88;
+    background: rgba(0,255,136,0.1); padding: 6px 16px; border-radius: 20px;
+    border: 1px solid rgba(0,255,136,0.2);
+    text-shadow: 0 0 20px rgba(0,255,136,0.6);
+    pointer-events: none; opacity: 0; transition: opacity 0.3s;
+    white-space: nowrap; z-index: 3;
+  }
+  .boost-badge.active { opacity: 1; }
+
+  /* Click ripple */
+  .click-ripple {
+    position: fixed; pointer-events: none; z-index: 8;
+    border-radius: 50%; border: 2px solid rgba(255,215,0,0.4);
+    width: 20px; height: 20px;
+    animation: rippleExpand 0.6s ease-out forwards;
+  }
+  @keyframes rippleExpand {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(8); opacity: 0; }
+  }
+
+  /* Floating click particles */
+  .click-particle {
+    position: fixed; pointer-events: none; z-index: 9;
+    font-size: 18px; font-weight: 800;
+    text-shadow: 0 0 12px currentColor;
+    animation: particleUp 0.9s cubic-bezier(0,0.5,0.5,1) forwards;
+  }
+  @keyframes particleUp {
+    0% { opacity: 1; transform: translateY(0) scale(0.5); }
+    50% { opacity: 1; transform: translateY(-60px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-120px) scale(0.8) translateX(30px); }
+  }
+
+  .click-particle .sub {
+    display: block; font-size: 10px; font-weight: 400;
+    opacity: 0.5; text-align: center;
+  }
+
+  /* Boost particles */
+  .boost-particle {
+    position: fixed; pointer-events: none; z-index: 8;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #00ff88;
+    box-shadow: 0 0 6px #00ff88;
+    animation: boostParticle 1.5s ease-out forwards;
+  }
+  @keyframes boostParticle {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-200px) scale(0); }
+  }
+
+  /* ---- SWIPE HINT ---- */
+  .swipe-hint {
+    position: absolute; z-index: 5; bottom: 70px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: rgba(255,255,255,0.15); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    animation: swipePulse 2.5s ease-in-out infinite;
+    transition: opacity 0.5s;
+  }
+  .swipe-hint .arrow-icon {
+    font-size: 20px; animation: arrowBounce 2s ease-in-out infinite;
+  }
+  @keyframes swipePulse {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 0.4; }
+  }
+  @keyframes arrowBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  /* ---- BOTTOM PANEL ---- */
+  .bottom-panel {
+    position: relative; z-index: 10;
+    background: rgba(8,8,24,0.75);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-radius: 24px 24px 0 0;
+    padding: 6px 14px 20px;
+    max-height: 45dvh;
+    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    touch-action: pan-y;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.4);
+  }
+  .panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 6px 12px; cursor: pointer;
+  }
+  .panel-header h3 {
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4);
+    text-transform: uppercase; letter-spacing: 2px;
+  }
+  .panel-header .panel-indicator {
+    width: 36px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.1);
+    margin: 0 auto; position: absolute; left: 50%; top: 6px; transform: translateX(-50%);
+  }
+  .panel-header .arrow {
+    color: rgba(255,255,255,0.2); font-size: 16px;
+    transition: transform 0.35s ease; display: inline-block;
+  }
+  .panel-header .arrow.open { transform: rotate(180deg); }
+
+  .upgrades-list {
+    display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto; overflow-x: hidden;
+    max-height: 34dvh; padding: 0 2px;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
+    touch-action: pan-y; -webkit-overflow-scrolling: touch;
+  }
+  .upgrades-list::-webkit-scrollbar { width: 3px; }
+  .upgrades-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  .upgrade {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 14px; padding: 12px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: all 0.2s; position: relative; overflow: hidden;
+    gap: 8px;
+  }
+  .upgrade:active { transform: scale(0.97); border-color: rgba(255,215,0,0.15); }
+  .upgrade.bought {
+    opacity: 0.35; border-color: rgba(0,255,136,0.08);
+  }
+  .upgrade .info { flex: 1; min-width: 0; z-index: 1; overflow-wrap: break-word; }
+  .upgrade .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .upgrade .desc { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .upgrade .progress-bar {
+    height: 2px; background: rgba(255,255,255,0.05); border-radius: 2px;
+    margin-top: 6px; width: 70%; overflow: hidden;
+  }
+  .upgrade .progress-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, rgba(255,215,0,0.3), rgba(255,215,0,0.5));
+    transition: width 0.3s;
+  }
+  .upgrade .cost-wrap { z-index: 1; display: flex; align-items: center; gap: 6px; }
+  .upgrade .cost {
+    font-size: 15px; font-weight: 700;
+    padding: 6px 12px; border-radius: 10px; white-space: nowrap;
+    color: rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.04);
+    transition: all 0.3s;
+  }
+  .upgrade .cost.affordable {
+    color: #ffd700;
+    background: rgba(255,215,0,0.08);
+    box-shadow: 0 0 20px rgba(255,215,0,0.05);
+  }
+  .upgrade .cost.cheap { color: #00ff88; background: rgba(0,255,136,0.06); }
+  .upgrade .cost.maxed { color: rgba(0,255,136,0.4); background: rgba(0,255,136,0.04); font-size: 12px; }
+  .upgrade .upgrade-icon {
+    font-size: 18px; opacity: 0.6; flex-shrink: 0;
+  }
+
+  /* ---- TABS ---- */
+  .panel-tabs {
+    display: flex; gap: 4px; padding: 0 6px 10px;
+  }
+  .panel-tab {
+    flex: 1; padding: 8px; text-align: center; border-radius: 10px;
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+    color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.04); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .panel-tab.active {
+    color: #ffd700; background: rgba(255,215,0,0.06);
+    border-color: rgba(255,215,0,0.12);
+  }
+
+  /* ---- LEADERBOARD ---- */
+  .leader-entry {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 14px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 12px;
+    transition: all 0.2s;
+  }
+  .leader-entry.gold {
+    background: rgba(255,215,0,0.06);
+    border-color: rgba(255,215,0,0.12);
+    padding: 14px;
+  }
+  .leader-rank {
+    font-size: 14px; font-weight: 800; color: rgba(255,255,255,0.15);
+    min-width: 28px; text-align: center;
+  }
+  .leader-rank.gold { color: #ffd700; font-size: 18px; }
+  .leader-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    flex-shrink: 0; overflow: hidden;
+  }
+  .leader-avatar.gold {
+    width: 44px; height: 44px;
+    box-shadow: 0 0 20px rgba(255,215,0,0.2);
+  }
+  .leader-avatar img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .leader-info { flex: 1; }
+  .leader-name { font-size: 13px; font-weight: 600; }
+  .leader-name.gold { font-size: 15px; color: #ffd700; }
+  .leader-dust {
+    font-size: 11px; font-weight: 700;
+    color: rgba(255,215,0,0.7);
+  }
+  .leader-dust.gold { font-size: 13px; }
+  .leader-score {
+    font-size: 10px; color: rgba(255,255,255,0.2);
+  }
+
+  /* ---- ENTRY ANIMATION ---- */
+  .game-container {
+    opacity: 0; animation: gameFadeIn 1.2s ease-out forwards;
+    display: flex; flex-direction: column; flex: 1; min-height: 0;
+  }
+  @keyframes gameFadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .planet-wrap {
+    transform: scale(0); animation: planetPop 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards;
+  }
+  @keyframes planetPop {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+  .stat-card {
+    transform: translateY(-20px); opacity: 0;
+    animation: slideDown 0.5s ease-out 0.6s forwards;
+  }
+  .stat-card.right {
+    animation-delay: 0.7s;
+  }
+  @keyframes slideDown {
+    0% { transform: translateY(-20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  .bottom-panel {
+    opacity: 0;
+    animation: panelFadeIn 0.6s ease-out 0.9s forwards;
+  }
+  @keyframes panelFadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  /* ---- SKINS ---- */
+  .skin-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    overflow-y: auto; overflow-x: hidden;
+    max-height: 34dvh; padding: 0 2px;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
+    touch-action: pan-y; -webkit-overflow-scrolling: touch;
+  }
+  .skin-grid::-webkit-scrollbar { width: 3px; }
+  .skin-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+  .acc-tab-content {
+    overflow-y: auto; overflow-x: hidden;
+    max-height: 34dvh; padding: 0 2px;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
+    touch-action: pan-y; -webkit-overflow-scrolling: touch;
+  }
+  .acc-tab-content::-webkit-scrollbar { width: 3px; }
+  .acc-tab-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  /* ---- LIQUID GLASS ULTRA ---- */
+  .bottom-panel {
+    background: rgba(4,4,20,0.55);
+    backdrop-filter: blur(60px) saturate(1.6);
+    -webkit-backdrop-filter: blur(60px) saturate(1.6);
+    border-top: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 -12px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    touch-action: pan-y;
+  }
+  .bottom-panel::before {
+    content: ''; position: absolute; inset: 0;
+    border-radius: 24px 24px 0 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 20%, transparent 40%);
+    pointer-events: none;
+  }
+  .bottom-panel::after {
+    content: ''; position: absolute; inset: 0;
+    border-radius: 24px 24px 0 0;
+    background: radial-gradient(ellipse 80% 20% at 50% -10%, rgba(100,180,255,0.04), transparent);
+    pointer-events: none;
+  }
+  .stat-card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(40px) saturate(1.4);
+    -webkit-backdrop-filter: blur(40px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .upgrade {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(30px) saturate(1.3);
+    -webkit-backdrop-filter: blur(30px) saturate(1.3);
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .panel-tabs {
+    position: relative; z-index: 1;
+  }
+  .panel-tab {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px) saturate(1.3);
+    -webkit-backdrop-filter: blur(20px) saturate(1.3);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .panel-tab.active {
+    background: rgba(255,215,0,0.10);
+    border-color: rgba(255,215,0,0.18);
+    box-shadow: 0 0 25px rgba(255,215,0,0.06), inset 0 1px 0 rgba(255,215,0,0.08);
+  }
+  .skin-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(24px) saturate(1.3);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+    border: 2px solid rgba(255,255,255,0.07);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .leader-entry {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(24px) saturate(1.3);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .leader-entry.gold {
+    background: rgba(255,215,0,0.08);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border-color: rgba(255,215,0,0.15);
+  }
+  .acc-item {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .acc-item.active {
+    background: rgba(255,215,0,0.10);
+    border-color: rgba(255,215,0,0.2);
+    box-shadow: 0 0 15px rgba(255,215,0,0.05);
+  }
+  .panel-header h3 {
+    position: relative; z-index: 1;
+  }
+  .cheat-overlay {
+    z-index: 200;
+  }
+
+  .skin-card {
+    background: rgba(255,255,255,0.03);
+    border: 2px solid rgba(255,255,255,0.05);
+    border-radius: 14px; padding: 14px 10px;
+    text-align: center; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .skin-card:active { transform: scale(0.95); }
+  .skin-card.active { border-color: #ffd700; background: rgba(255,215,0,0.06); }
+  .skin-card.locked { opacity: 0.3; }
+  .skin-planet {
+    width: 60px; height: 60px; border-radius: 50%;
+    margin: 0 auto 8px;
+    transition: transform 0.3s;
+  }
+  .skin-card.active .skin-planet { transform: scale(1.1); }
+  .skin-name { font-size: 12px; font-weight: 600; }
+  .skin-desc { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+  .skin-status { font-size: 9px; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .skin-status.active-skin { color: #ffd700; }
+  .skin-status.locked-status { color: rgba(255,255,255,0.2); }
+
+  /* ---- ENHANCED GLOW ---- */
+  @keyframes glowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    25% { transform: scale(1.08); opacity: 0.8; }
+    50% { transform: scale(1.12); opacity: 1; }
+    75% { transform: scale(0.95); opacity: 0.6; }
+  }
+  .planet-glow {
+    animation: glowPulse 4s ease-in-out infinite;
+  }
+  .planet-glow-rotate {
+    position: absolute; width: 320px; height: 320px; border-radius: 50%;
+    animation: glowRotate 8s linear infinite;
+    pointer-events: none; z-index: 0;
+    mask: radial-gradient(circle, transparent 35%, black 50%);
+    -webkit-mask: radial-gradient(circle, transparent 35%, black 50%);
+  }
+  @keyframes glowRotate {
+    0% { transform: rotate(0deg) scale(1.05); }
+    100% { transform: rotate(360deg) scale(1.05); }
+  }
+  .planet-glow-inner {
+    position: absolute; width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 60%);
+    animation: glowBreathe 3s ease-in-out infinite;
+    pointer-events: none; z-index: 1;
+  }
+  @keyframes glowBreathe {
+    0%, 100% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+
+  /* ---- ACCESSORIES ---- */
+  .acc-layer {
+    position: absolute; inset: 0; z-index: 1;
+    pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .acc-crown {
+    position: absolute; top: -40px; font-size: 34px;
+    animation: crownBob 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(255,215,0,0.4));
+    text-shadow: 0 0 30px rgba(255,215,0,0.3);
+  }
+  @keyframes crownBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .acc-halo {
+    width: 250px; height: 50px; border-radius: 50%;
+    border: 2px solid var(--acc-color, rgba(100,180,255,0.2));
+    box-shadow: 0 0 30px var(--acc-glow, rgba(100,180,255,0.1)), 0 0 60px var(--acc-glow, rgba(100,180,255,0.05));
+    animation: haloSpin 6s linear infinite;
+    transform: rotateX(75deg);
+  }
+  @keyframes haloSpin {
+    0% { transform: rotateX(75deg) rotateZ(0deg); }
+    100% { transform: rotateX(75deg) rotateZ(360deg); }
+  }
+  .acc-moon {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ddd, #888);
+    box-shadow: 0 0 10px rgba(200,200,200,0.5), inset 0 -2px 4px rgba(0,0,0,0.3);
+    position: absolute; left: 50%; top: 50%;
+    animation: moonOrbit 6s linear infinite;
+  }
+  .acc-moon::after {
+    content: ''; position: absolute; top: 2px; left: 3px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+  }
+  @keyframes moonOrbit {
+    0% { transform: translate(-50%, -50%) rotate(0deg) translateX(110px) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg) translateX(110px) rotate(-360deg); }
+  }
+  .acc-dual {
+    width: 260px; height: 50px;
+    border: 2px solid var(--acc-color, rgba(100,180,255,0.15));
+    border-radius: 50%; position: absolute;
+    transform: rotateX(75deg) rotateZ(0deg);
+    animation: dualSpin 8s linear infinite;
+  }
+  .acc-dual::after {
+    content: ''; position: absolute; inset: 12px;
+    border: 2px solid var(--acc-color, rgba(100,180,255,0.12));
+    border-radius: 50%; opacity: 0.7;
+  }
+  @keyframes dualSpin {
+    0% { transform: rotateX(75deg) rotateZ(0deg); }
+    100% { transform: rotateX(75deg) rotateZ(360deg); }
+  }
+  .acc-disk {
+    width: 300px; height: 40px; border-radius: 50%;
+    background: linear-gradient(90deg, transparent, var(--acc-glow, rgba(100,180,255,0.1)), var(--acc-color, rgba(100,180,255,0.2)), var(--acc-glow, rgba(100,180,255,0.1)), transparent);
+    box-shadow: 0 0 40px var(--acc-glow, rgba(100,180,255,0.08));
+    animation: diskSpin 3s linear infinite;
+    transform: rotateX(75deg);
+  }
+  @keyframes diskSpin {
+    0% { transform: rotateX(75deg) rotateZ(0deg); }
+    100% { transform: rotateX(75deg) rotateZ(360deg); }
+  }
+
+  /* Accessories UI in skins tab */
+  .acc-section {
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .acc-section-label {
+    font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.25);
+    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;
+  }
+  .acc-row {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 2px 0; scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.05) transparent;
+  }
+  .acc-row::-webkit-scrollbar { height: 2px; }
+  .acc-row::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+  .acc-item {
+    flex-shrink: 0; padding: 6px 12px;
+    border-radius: 10px; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    text-align: center; cursor: pointer;
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4);
+    transition: all 0.2s;
+  }
+  .acc-item:active { transform: scale(0.93); }
+  .acc-item.active {
+    border-color: rgba(255,215,0,0.2);
+    background: rgba(255,215,0,0.06);
+    color: #ffd700;
+  }
+  .acc-item.locked { opacity: 0.25; }
+
+  /* Cheat overlay */
+  .cheat-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.7);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .cheat-overlay.show { opacity: 1; }
+  .cheat-overlay img {
+    max-width: 90vw; max-height: 80vh;
+    object-fit: contain;
+    border-radius: 20px;
+    box-shadow: 0 0 60px rgba(255,0,0,0.3);
+  }
+@media (max-height: 650px) {
+    .planet { width: 130px; height: 130px; }
+    .planet-wrap { width: 160px; height: 160px; }
+    .planet-glow { width: 240px; height: 240px; }
+    .planet .ring { width: 220px; height: 35px; }
+    .stat-card .value { font-size: 20px; }
+    .stat-card { padding: 10px 12px; }
+    .top-bar { padding: 12px 12px 4px; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<canvas id="fxCanvas"></canvas>
+
+<div class="game-container">
+
+<div class="top-bar">
+  <div class="stat-card">
+    <div class="label">Звёздная пыль</div>
+    <div class="value" id="dustDisplay">0</div>
+    <div class="sub" id="epsDisplay">0 /сек</div>
+  </div>
+  <div class="stat-card right">
+    <div class="label">Всего кликов</div>
+    <div class="value" id="clickDisplay">0</div>
+    <div class="sub" id="levelDisplay">Stellar Dust</div>
+  </div>
+</div>
+
+<div class="center-area" id="clickArea">
+  <div class="planet-wrap">
+    <div class="planet-glow" id="planetGlow"></div>
+    <div class="planet-glow-rotate" id="planetGlowRotate"></div>
+    <div class="planet-glow-inner"></div>
+    <div class="acc-layer" id="accLayer"></div>
+    <div class="planet" id="planet">
+      <div class="sphere" id="sphere">
+        <div class="surface"></div>
+        <div class="crater"></div>
+        <div class="crater"></div>
+        <div class="crater"></div>
+        <div class="crater"></div>
+        <div class="crater"></div>
+      </div>
+      <div class="atmo"></div>
+      <div class="ring"></div>
+      <div class="boost-badge" id="boostBadge">✦ УСКОРЕНИЕ ×2</div>
+    </div>
+  </div>
+</div>
+
+<div class="swipe-hint" id="swipeHint">
+  <span class="arrow-icon">↑</span>
+  <span>Свайп вверх — ускорение</span>
+</div>
+
+<div class="cheat-overlay" id="cheatOverlay">
+  <img src="dick.png" id="cheatImage" onerror="this.style.display='none';document.getElementById('cheatText').style.display='block'">
+  <div id="cheatText" style="display:none;font-size:clamp(60px,20vw,160px);font-weight:800;color:#ff2244;text-shadow:0 0 40px rgba(255,34,68,0.5);text-align:center;line-height:1.2;user-select:none;">🍆<br><span style="font-size:0.4em;font-weight:600;">ИДИ НАХУЙ</span></div>
+</div>
+
+<div class="bottom-panel" id="bottomPanel">
+  <div class="panel-header" id="panelToggle">
+    <div class="panel-indicator"></div>
+    <h3 id="panelTitle">🛸 Улучшения</h3>
+    <span class="arrow" id="panelArrow">▼</span>
+  </div>
+  <div class="panel-tabs">
+    <div class="panel-tab active" data-tab="upgrades">🛸 Улучшения</div>
+    <div class="panel-tab" data-tab="leaders">🏆 Лидеры</div>
+    <div class="panel-tab" data-tab="skins">🎨 Скины</div>
+    <div class="panel-tab" data-tab="accs">💎 Аксессуары</div>
+  </div>
+  <div class="upgrades-list" id="upgradesList"></div>
+  <div class="upgrades-list" id="leadersList" style="display:none;"></div>
+  <div class="skin-grid" id="skinsList" style="display:none;"></div>
+  <div class="acc-tab-content" id="accTabContent" style="display:none;"></div>
+</div>
+
+</div> <!-- game-container -->
+
+<script>
+// ====== GAME STATE ======
+let dust = 0;
+let totalClicks = 0;
+let clickPower = 1;
+let autoRate = 0;
+let boostTimer = 0;
+const MAX_BOOST = 10;
+const SAVE_KEY = 'stellar_dust_save';
+let upgradeRenderCounter = 0;
+
+const UPGRADES = [
+  { id: 'cp1', name: 'Усиление пальца', desc: '+1 пыли за клик', icon: '👆', baseCost: 10, costMult: 1.15, max: 20, type: 'click', add: 1 },
+  { id: 'auto1', name: 'Авто-дрон', desc: '+1 пыли/сек', icon: '🛸', baseCost: 50, costMult: 1.18, max: 20, type: 'auto', add: 1 },
+  { id: 'cp2', name: 'Космическая перчатка', desc: '+5 пыли за клик', icon: '🧤', baseCost: 200, costMult: 1.20, max: 15, type: 'click', add: 5 },
+  { id: 'auto2', name: 'Дрон-флот', desc: '+5 пыли/сек', icon: '🚀', baseCost: 800, costMult: 1.22, max: 15, type: 'auto', add: 5 },
+  { id: 'cp3', name: 'Лазерный тап', desc: '+20 пыли за клик', icon: '⚡', baseCost: 3000, costMult: 1.25, max: 10, type: 'click', add: 20 },
+  { id: 'auto3', name: 'Шахтёрская станция', desc: '+25 пыли/сек', icon: '🏭', baseCost: 10000, costMult: 1.28, max: 10, type: 'auto', add: 25 },
+  { id: 'cp4', name: 'Квантовый тап', desc: '+100 пыли за клик', icon: '💫', baseCost: 50000, costMult: 1.30, max: 8, type: 'click', add: 100 },
+  { id: 'auto4', name: 'Сфера Дайсона', desc: '+150 пыли/сек', icon: '🌐', baseCost: 150000, costMult: 1.35, max: 8, type: 'auto', add: 150 },
+  { id: 'boost', name: 'Ускоритель', desc: '×2 на 10с (свайп вверх)', icon: '🔥', baseCost: 2000, costMult: 2.0, max: Infinity, type: 'boost', add: 0 },
+];
+
+const bought = {};
+UPGRADES.forEach(u => bought[u.id] = 0);
+
+// ====== SAVE/LOAD ======
+function saveGame() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ dust, totalClicks, bought, ts: Date.now() })); } catch(e) {}
+}
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    dust = d.dust || 0;
+    totalClicks = d.totalClicks || 0;
+    if (d.bought) Object.keys(d.bought).forEach(k => { if (bought[k] !== undefined) bought[k] = d.bought[k]; });
+    recalcStats();
+    if (d.ts && autoRate > 0) {
+      const elapsed = Math.min((Date.now() - d.ts) / 1000, 3600);
+      dust += autoRate * elapsed;
+    }
+  } catch(e) {}
+}
+
+function recalcStats() {
+  clickPower = 1; autoRate = 0;
+  UPGRADES.forEach(u => {
+    const n = bought[u.id] || 0;
+    if (u.type === 'click') clickPower += u.add * n;
+    if (u.type === 'auto') autoRate += u.add * n;
+  });
+}
+function getCost(u) {
+  const n = bought[u.id] || 0;
+  if (u.max !== Infinity && n >= u.max) return -1;
+  return Math.floor(u.baseCost * Math.pow(u.costMult, n));
+}
+
+// ====== FORMATTING ======
+function formatNum(n) {
+  if (n < 1000) return n.toString();
+  if (n < 1e6) return (n/1e3).toFixed(n<1e4?1:0) + 'K';
+  if (n < 1e9) return (n/1e6).toFixed(n<1e7?1:0) + 'M';
+  if (n < 1e12) return (n/1e9).toFixed(1) + 'B';
+  return (n/1e12).toFixed(1) + 'T';
+}
+
+// ====== CLICK HANDLER ======
+const planet = document.getElementById('planet');
+const sphere = document.getElementById('sphere');
+
+planet.addEventListener('pointerdown', function(e) {
+  e.preventDefault();
+  const rect = this.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const x = e.clientX || (e.changedTouches?.[0]?.clientX || cx);
+  const y = e.clientY || (e.changedTouches?.[0]?.clientY || cy);
+
+  const mult = boostTimer > 0 ? 2 : 1;
+  const gain = Math.floor(clickPower * mult);
+  dust += gain;
+  totalClicks++;
+
+  spawnRipple(x, y);
+  spawnParticle(x, y, gain, mult > 1);
+  updateUI();
+});
+
+function spawnRipple(x, y) {
+  const el = document.createElement('div');
+  el.className = 'click-ripple';
+  el.style.left = (x - 10) + 'px';
+  el.style.top = (y - 10) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 600);
+}
+
+function spawnParticle(x, y, amount, boosted) {
+  const el = document.createElement('div');
+  el.className = 'click-particle';
+  el.style.left = (x - 25) + 'px';
+  el.style.top = (y - 10) + 'px';
+  el.style.color = boosted ? '#00ff88' : '#ffd700';
+  el.innerHTML = (boosted ? '⚡' : '') + '+' + amount + '<span class="sub">' + (boosted ? '×2' : 'пыль') + '</span>';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+
+  // extra mini particles for boost
+  if (boosted) {
+    for (let i = 0; i < 4; i++) {
+      const p = document.createElement('div');
+      p.className = 'boost-particle';
+      p.style.left = (x + (Math.random() - 0.5) * 40) + 'px';
+      p.style.top = (y + (Math.random() - 0.5) * 40) + 'px';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1500);
+    }
+  }
+}
+
+// ====== SWIPE ======
+let swipeStartY = 0;
+let pointerStartY = 0;
+const clickArea = document.getElementById('clickArea');
+
+clickArea.addEventListener('touchstart', e => { swipeStartY = e.touches[0].clientY; }, { passive: true });
+clickArea.addEventListener('touchend', e => {
+  const dy = swipeStartY - (e.changedTouches?.[0]?.clientY || swipeStartY);
+  if (dy > 80 && boostTimer <= 0) activateBoost();
+}, { passive: true });
+
+clickArea.addEventListener('pointerdown', e => { pointerStartY = e.clientY; });
+clickArea.addEventListener('pointerup', e => {
+  const dy = pointerStartY - e.clientY;
+  if (dy > 80 && boostTimer <= 0) activateBoost();
+});
+
+function activateBoost() {
+  const cost = getCost(UPGRADES.find(u => u.id === 'boost'));
+  if (cost > 0 && dust >= cost) {
+    dust -= cost;
+    bought['boost'] = (bought['boost'] || 0) + 1;
+    boostTimer = MAX_BOOST;
+    document.getElementById('boostBadge').classList.add('active');
+    document.getElementById('planetGlow').style.background =
+      'radial-gradient(circle, rgba(0,255,136,0.25) 0%, rgba(0,200,100,0.08) 50%, transparent 70%)';
+    document.getElementById('planetGlowRotate').style.background =
+      'conic-gradient(from 0deg, transparent, rgba(0,255,136,0.08), transparent, rgba(0,255,136,0.08), transparent)';
+    document.getElementById('swipeHint').style.opacity = '0';
+    updateUI();
+    renderUpgrades();
+  }
+}
+
+// ====== UPGRADES UI ======
+const upgradesList = document.getElementById('upgradesList');
+
+function renderUpgrades() {
+  upgradesList.innerHTML = '';
+  UPGRADES.forEach(u => {
+    const n = bought[u.id] || 0;
+    const cost = getCost(u);
+    const maxed = cost === -1;
+    const canAfford = cost <= dust && !maxed;
+    const progress = u.max !== Infinity ? (n / u.max * 100) : 0;
+
+    const div = document.createElement('div');
+    div.className = 'upgrade' + (maxed ? ' bought' : '');
+    if (canAfford) div.style.borderColor = 'rgba(255,215,0,0.12)';
+    if (u.id === 'boost' && boostTimer > 0) div.style.borderColor = 'rgba(0,255,136,0.15)';
+
+    let costHtml = '';
+    if (maxed) {
+      costHtml = '<span class="cost maxed">✓ MAX</span>';
+    } else {
+      costHtml = `<span class="cost ${canAfford ? 'affordable' : ''}">✦ ${formatNum(cost)}</span>`;
+    }
+
+    div.innerHTML = `
+      <div class="info">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;">
+          <span class="upgrade-icon">${u.icon}</span>
+          <span class="name">${u.name}</span>
+        </div>
+        <div class="desc">${u.desc} ${u.max !== Infinity ? `— ${n}/${u.max}` : ''}</div>
+        ${u.max !== Infinity ? `<div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>` : ''}
+      </div>
+      <div class="cost-wrap">${costHtml}</div>
+    `;
+
+    if (!maxed) {
+      div.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        if (u.id === 'boost') return;
+        buyUpgrade(u.id);
+      });
+    }
+    upgradesList.appendChild(div);
+  });
+}
+
+function buyUpgrade(id) {
+  const u = UPGRADES.find(x => x.id === id);
+  if (!u || u.id === 'boost') return;
+  const cost = getCost(u);
+  if (cost === -1 || dust < cost) return;
+  dust -= cost;
+  bought[id] = (bought[id] || 0) + 1;
+  recalcStats();
+  renderUpgrades();
+  updateUI();
+  saveGame();
+}
+
+// ====== LEADERBOARD ======
+const LEADERS = [
+  { name: 'Хуй', dust: 999999999999, clicks: 99999999, avatar: 'dick.png' },
+  { name: 'Крипто-хомяк', dust: 874000000000, clicks: 45000000 },
+  { name: 'Мамин программист', dust: 652000000000, clicks: 38000000 },
+  { name: 'Сосед с кувалдой', dust: 431000000000, clicks: 29000000 },
+  { name: 'Бабушка-хакер', dust: 298000000000, clicks: 21000000 },
+  { name: 'Кот-трейдер', dust: 175000000000, clicks: 15000000 },
+  { name: 'Школьник-криптан', dust: 98000000000, clicks: 9200000 },
+  { name: 'Диванный аналитик', dust: 54000000000, clicks: 5400000 },
+  { name: 'Человек-свайп', dust: 21000000000, clicks: 2800000 },
+  { name: 'Серега с района', dust: 5000000000, clicks: 800000 },
+];
+
+let currentTab = 'upgrades';
+
+function renderLeaders() {
+  const list = document.getElementById('leadersList');
+  list.innerHTML = '';
+  LEADERS.forEach((l, i) => {
+    const top = i === 0;
+    const div = document.createElement('div');
+    div.className = 'leader-entry' + (top ? ' gold' : '');
+
+    let avatarHtml = top
+      ? `<div class="leader-avatar gold"><img src="${l.avatar}" onerror="this.style.display='none'"><\/div>`
+      : `<div class="leader-avatar"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px;">${['🥇','🥈','🥉','👤','👤','👤','👤','👤','👤','👤'][i]}</div></div>`;
+
+    div.innerHTML = `
+      <div class="leader-rank ${top ? 'gold' : ''}">${i + 1}</div>
+      ${avatarHtml}
+      <div class="leader-info">
+        <div class="leader-name ${top ? 'gold' : ''}">${l.name}</div>
+        <div class="leader-dust ${top ? 'gold' : ''}">✦ ${formatNum(l.dust)}</div>
+        <div class="leader-score">👆 ${formatNum(l.clicks)} кликов</div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ====== SKINS ======
+const SKINS = [
+  { id: 'blue', name: 'Голубая планета', desc: 'Классика',
+    gradient: 'radial-gradient(circle at 35% 35%, #7ec8ff, #4a90d9 35%, #2a5a8a 60%, #0d2647 80%, #050e1f)',
+    ring: 'rgba(100,180,255,0.15)', glow: 'rgba(74,144,217,0.25)', glow2: 'rgba(74,144,217,0.06)', unlock: 0 },
+  { id: 'red', name: 'Марсианская', desc: '1000 кликов',
+    gradient: 'radial-gradient(circle at 30% 30%, #ff7a5a, #d94a2a 35%, #8a2a0a 60%, #4a1005 80%, #1a0505)',
+    ring: 'rgba(255,80,50,0.15)', glow: 'rgba(200,60,40,0.25)', glow2: 'rgba(200,60,40,0.06)', unlock: 1000 },
+  { id: 'gold', name: 'Золотая', desc: '5000 кликов',
+    gradient: 'radial-gradient(circle at 35% 35%, #ffec6a, #ffc82a 35%, #c88a00 60%, #6a4a00 80%, #2a1a00)',
+    ring: 'rgba(255,215,0,0.2)', glow: 'rgba(255,215,0,0.25)', glow2: 'rgba(255,200,0,0.08)', unlock: 5000 },
+  { id: 'green', name: 'Инопланетная', desc: '15000 кликов',
+    gradient: 'radial-gradient(circle at 35% 35%, #6affaa, #2ab86a 35%, #1a7a3a 60%, #0a3a1a 80%, #051a0a)',
+    ring: 'rgba(74,255,138,0.12)', glow: 'rgba(26,200,100,0.25)', glow2: 'rgba(26,200,100,0.06)', unlock: 15000 },
+  { id: 'purple', name: 'Туманность', desc: '50000 кликов',
+    gradient: 'radial-gradient(circle at 35% 35%, #d4a0ff, #8a3acc 35%, #5a1a8a 60%, #2a0a4a 80%, #150526)',
+    ring: 'rgba(150,100,255,0.15)', glow: 'rgba(124,58,237,0.25)', glow2: 'rgba(124,58,237,0.06)', unlock: 50000 },
+  { id: 'dark', name: 'Чёрная дыра', desc: '200000 кликов',
+    gradient: 'radial-gradient(circle at 35% 35%, #667, #334 35%, #111 60%, #050505 80%, #000)',
+    ring: 'rgba(200,0,255,0.1)', glow: 'rgba(100,0,150,0.2)', glow2: 'rgba(100,0,150,0.05)', unlock: 200000 },
+];
+
+let activeSkin = 'blue';
+
+function applySkin(id) {
+  const s = SKINS.find(x => x.id === id);
+  if (!s) return;
+  activeSkin = id;
+  const sphere = document.getElementById('sphere');
+  sphere.style.background = s.gradient;
+  sphere.style.boxShadow = `0 0 80px ${s.glow}, 0 0 160px ${s.glow.replace('0.25', '0.08')}, inset 0 -30px 60px rgba(0,0,0,0.5)`;
+  document.querySelector('.planet .ring').style.borderColor = s.ring;
+
+  // Update main glow
+  const glowEl = document.getElementById('planetGlow');
+  glowEl.style.background = `radial-gradient(circle, ${s.glow} 0%, ${s.glow.replace('0.25', '0.08')} 50%, transparent 70%)`;
+  // Update rotating glow
+  const glowRotate = document.getElementById('planetGlowRotate');
+  glowRotate.style.background = `conic-gradient(from 0deg, transparent, ${s.glow2 || 'rgba(74,144,217,0.04)'}, transparent, ${s.glow2 || 'rgba(74,144,217,0.04)'}, transparent)`;
+
+  // Re-apply accessory with new colors
+  applyAccessory(activeAccessory);
+
+  localStorage.setItem('sd_skin', id);
+  renderSkins();
+}
+
+function renderSkins() {
+  const grid = document.getElementById('skinsList');
+  grid.innerHTML = '';
+  SKINS.forEach(s => {
+    const unlocked = totalClicks >= s.unlock;
+    const isActive = activeSkin === s.id;
+    const div = document.createElement('div');
+    div.className = 'skin-card' + (isActive ? ' active' : '') + (!unlocked ? ' locked' : '');
+
+    div.innerHTML = `
+      <div class="skin-planet" style="background:${s.gradient};box-shadow:0 0 20px ${s.glow};"></div>
+      <div class="skin-name">${s.name}</div>
+      <div class="skin-desc">${s.desc}</div>
+      <div class="skin-status ${isActive ? 'active-skin' : ''} ${!unlocked ? 'locked-status' : ''}">${isActive ? '✓ активно' : !unlocked ? '🔒 закр' : 'выбрать'}</div>
+    `;
+
+    if (unlocked && !isActive) {
+      div.addEventListener('click', () => applySkin(s.id));
+    }
+    grid.appendChild(div);
+  });
+}
+
+function renderAccTab() {
+  const container = document.getElementById('accTabContent');
+  container.innerHTML = '';
+  const label = document.createElement('div');
+  label.className = 'acc-section-label';
+  label.textContent = '✦ Выбери аксессуар';
+  container.appendChild(label);
+  const row = document.createElement('div');
+  row.className = 'acc-row';
+  container.appendChild(row);
+  ACCESSORIES.forEach(a => {
+    const unlocked = totalClicks >= a.unlock;
+    const isActive = activeAccessory === a.id;
+    const item = document.createElement('div');
+    item.className = 'acc-item' + (isActive ? ' active' : '') + (!unlocked ? ' locked' : '');
+    item.innerHTML = a.icon + ' ' + a.name + '<div style="font-size:9px;opacity:0.4;margin-top:2px;">' + a.desc + '</div>';
+    if (unlocked) {
+      item.addEventListener('click', () => { applyAccessory(a.id); renderAccTab(); });
+    }
+    row.appendChild(item);
+  });
+}
+
+// ====== ACCESSORIES DATA ======
+const ACCESSORIES = [
+  { id: 'none', name: 'Без', desc: 'Без аксессуаров', unlock: 0, icon: '✕' },
+  { id: 'crown', name: 'Корона', desc: '1000 кликов', unlock: 1000, icon: '👑' },
+  { id: 'halo', name: 'Ореол', desc: '5000 кликов', unlock: 5000, icon: '◯' },
+  { id: 'moon', name: 'Луна', desc: '20 000 кликов', unlock: 20000, icon: '🌙' },
+  { id: 'dual', name: '2 кольца', desc: '100 000 кликов', unlock: 100000, icon: '⭕' },
+  { id: 'disk', name: 'Аккреция', desc: '500 000 кликов', unlock: 500000, icon: '💫' },
+];
+
+let activeAccessory = 'none';
+
+function applyAccessory(id) {
+  activeAccessory = id;
+  const layer = document.getElementById('accLayer');
+  layer.innerHTML = '';
+  if (id === 'none') {
+    localStorage.setItem('sd_accessory', id);
+    return;
+  }
+
+  const skin = SKINS.find(s => s.id === activeSkin);
+  const accColor = skin ? skin.glow.replace('0.25', '0.3') : 'rgba(74,144,217,0.3)';
+  const accGlow = skin ? skin.glow.replace('0.25', '0.12') : 'rgba(74,144,217,0.12)';
+
+  const el = document.createElement('div');
+
+  switch (id) {
+    case 'crown':
+      el.className = 'acc-crown';
+      el.textContent = '👑';
+      el.style.setProperty('--acc-color', accColor);
+      el.style.setProperty('--acc-glow', accGlow);
+      break;
+    case 'halo':
+      el.className = 'acc-halo';
+      el.style.setProperty('--acc-color', accColor);
+      el.style.setProperty('--acc-glow', accGlow);
+      break;
+    case 'moon':
+      el.className = 'acc-moon';
+      break;
+    case 'dual':
+      el.className = 'acc-dual';
+      el.style.setProperty('--acc-color', accColor);
+      el.style.setProperty('--acc-glow', accGlow);
+      break;
+    case 'disk':
+      el.className = 'acc-disk';
+      el.style.setProperty('--acc-color', accColor.replace('0.3', '0.2'));
+      el.style.setProperty('--acc-glow', accGlow);
+      break;
+  }
+
+  layer.appendChild(el);
+  localStorage.setItem('sd_accessory', id);
+}
+
+// ====== SKINS TAB CHEAT: 10 тапов = 1М кликов ======
+let skinTabTaps = 0;
+let skinTabTimer = null;
+
+// ====== TAB SWITCHING ======
+document.querySelectorAll('.panel-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    document.getElementById('upgradesList').style.display = currentTab === 'upgrades' ? '' : 'none';
+    document.getElementById('leadersList').style.display = currentTab === 'leaders' ? '' : 'none';
+    document.getElementById('skinsList').style.display = currentTab === 'skins' ? '' : 'none';
+    document.getElementById('accTabContent').style.display = currentTab === 'accs' ? '' : 'none';
+    const titles = { upgrades: '🛸 Улучшения', leaders: '🏆 Лидеры', skins: '🎨 Скины', accs: '💎 Аксессуары' };
+    document.getElementById('panelTitle').textContent = titles[currentTab] || '🛸 Улучшения';
+    if (currentTab === 'leaders') renderLeaders();
+    if (currentTab === 'skins') {
+      renderSkins();
+      // Cheat: 10 тапов по вкладке скинов = +1М кликов
+      skinTabTaps++;
+      if (skinTabTaps === 1) {
+        skinTabTimer = setTimeout(() => { skinTabTaps = 0; }, 2000);
+      }
+      if (skinTabTaps >= 10) {
+        skinTabTaps = 0;
+        clearTimeout(skinTabTimer);
+        totalClicks += 1000000;
+        spawnParticle(window.innerWidth/2, window.innerHeight/2 - 80, '+1M кликов');
+        spawnParticle(window.innerWidth/2 + 30, window.innerHeight/2 - 100, 'ЧИТ');
+        renderSkins();
+        updateUI();
+        saveGame();
+      }
+    }
+    if (currentTab === 'accs') renderAccTab();
+  });
+});
+
+// ====== UI UPDATE ======
+function updateUI() {
+  const d = document.getElementById('dustDisplay');
+  const prev = parseFloat(d.dataset.val) || 0;
+  d.dataset.val = Math.floor(dust);
+  d.textContent = formatNum(Math.floor(dust));
+
+  document.getElementById('clickDisplay').textContent = formatNum(totalClicks);
+
+  const eps = autoRate * (boostTimer > 0 ? 2 : 1);
+  document.getElementById('epsDisplay').textContent = formatNum(eps) + '/сек' + (boostTimer > 0 ? ' ⚡×2' : '');
+
+  // level titles
+  const titles = ['Stellar Dust', 'Космический collector', 'Звёздный барон', 'Галактический магнат', 'Повелитель пыли', 'Создатель звёзд'];
+  const idx = Math.min(Math.floor(totalClicks / 500), titles.length - 1);
+  document.getElementById('levelDisplay').textContent = titles[idx];
+}
+
+// ====== BACKGROUND CANVAS ======
+const bgCanvas = document.getElementById('bgCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+let width, height;
+let starLayers = [];
+let nebula = [];
+let shootingStars = [];
+let galaxies = [];
+
+function pregenGalaxyStars(g) {
+  g._stars = [];
+  for (let arm = 0; arm < g.arms; arm++) {
+    const armAngle = (arm / g.arms) * Math.PI * 2;
+    for (let s = 0; s < 15; s++) {
+      const progress = 0.2 + Math.random() * 0.7;
+      const rad = progress * g.r * 0.75;
+      const a = progress * Math.PI * g.twist + armAngle + (Math.random() - 0.5) * 0.4;
+      g._stars.push({
+        arm,
+        px: Math.cos(a) * rad,
+        py: Math.sin(a) * rad * 0.35,
+        sr: 0.3 + Math.random() * 0.8,
+        shine: 0.5 + Math.random() * 0.5,
+      });
+    }
+  }
+}
+
+function resizeBg() {
+  width = bgCanvas.width = window.innerWidth;
+  height = bgCanvas.height = window.innerHeight;
+
+  // Star layers
+  starLayers = [
+    { stars: [], count: 80, size: [0.3, 0.8], speed: 0.02, alpha: [0.2, 0.6] },
+    { stars: [], count: 50, size: [0.6, 1.5], speed: 0.04, alpha: [0.3, 0.8] },
+    { stars: [], count: 20, size: [1.2, 2.5], speed: 0.06, alpha: [0.4, 1.0] },
+  ];
+  starLayers.forEach(layer => {
+    layer.stars = Array.from({length: layer.count}, () => ({
+      x: Math.random() * width, y: Math.random() * height,
+      r: layer.size[0] + Math.random() * (layer.size[1] - layer.size[0]),
+      alpha: layer.alpha[0] + Math.random() * (layer.alpha[1] - layer.alpha[0]),
+      speed: layer.speed * (0.5 + Math.random()),
+      twinkleSpeed: 0.01 + Math.random() * 0.03,
+      twinklePhase: Math.random() * Math.PI * 2,
+    }));
+  });
+
+  // Nebula blobs
+  nebula = Array.from({length: 4}, () => ({
+    x: Math.random() * width, y: Math.random() * height,
+    r: 150 + Math.random() * 200,
+    color: `hsla(${210 + Math.random() * 60}, 60%, ${15 + Math.random() * 10}%, 0.03)`,
+    dx: (Math.random() - 0.5) * 0.1,
+    dy: (Math.random() - 0.5) * 0.1,
+  }));
+
+  // Flying galaxies
+  galaxies = [
+    { x: width * 0.15, y: height * -0.15, r: 200, arms: 3, twist: 5, hue: 270, speed: 0.06, angle: 0.25, alpha: 0.18, rotation: 0 },
+    { x: width * 0.85, y: height * 1.2, r: 250, arms: 4, twist: 4, hue: 210, speed: 0.05, angle: -0.15, alpha: 0.15, rotation: 0 },
+    { x: width * 1.15, y: height * 0.3, r: 180, arms: 5, twist: 6, hue: 310, speed: 0.07, angle: 0.45, alpha: 0.13, rotation: 0 },
+    { x: width * -0.15, y: height * 0.8, r: 220, arms: 3, twist: 5, hue: 170, speed: 0.06, angle: -0.35, alpha: 0.16, rotation: 0 },
+  ];
+  galaxies.forEach(g => pregenGalaxyStars(g));
+}
+
+function drawBg() {
+  bgCtx.clearRect(0, 0, width, height);
+
+  // Nebula
+  nebula.forEach(n => {
+    const grad = bgCtx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+    grad.addColorStop(0, n.color);
+    grad.addColorStop(1, 'transparent');
+    bgCtx.fillStyle = grad;
+    bgCtx.fillRect(0, 0, width, height);
+    n.x += n.dx; n.y += n.dy;
+    if (n.x < -n.r || n.x > width + n.r) n.dx *= -1;
+    if (n.y < -n.r || n.y > height + n.r) n.dy *= -1;
+  });
+
+  // Flying galaxies — enhanced
+  galaxies.forEach(g => {
+    g.x += Math.cos(g.angle) * g.speed;
+    g.y += Math.sin(g.angle) * g.speed;
+    g.rotation = (g.rotation || 0) + 0.001;
+    if (g.x > width + g.r * 2) g.x = -g.r;
+    if (g.x < -g.r * 2) g.x = width + g.r;
+    if (g.y > height + g.r * 2) g.y = -g.r;
+    if (g.y < -g.r * 2) g.y = height + g.r;
+
+    bgCtx.save();
+    bgCtx.translate(g.x, g.y);
+    bgCtx.rotate(g.angle + (g.rotation || 0));
+
+    // Dust glow underlay
+    const dustGrad = bgCtx.createRadialGradient(0, 0, 0, 0, 0, g.r * 0.9);
+    dustGrad.addColorStop(0, `hsla(${g.hue}, 50%, 40%, ${g.alpha * 0.3})`);
+    dustGrad.addColorStop(0.5, `hsla(${g.hue}, 40%, 25%, ${g.alpha * 0.12})`);
+    dustGrad.addColorStop(1, 'transparent');
+    bgCtx.fillStyle = dustGrad;
+    bgCtx.beginPath();
+    bgCtx.arc(0, 0, g.r * 0.9, 0, Math.PI * 2);
+    bgCtx.fill();
+
+    // Draw spiral arms with gradient thickness
+    for (let arm = 0; arm < g.arms; arm++) {
+      const armAngle = (arm / g.arms) * Math.PI * 2;
+      // Main arm stroke
+      bgCtx.beginPath();
+      for (let t = 0; t < Math.PI * g.twist; t += 0.04) {
+        const progress = t / (Math.PI * g.twist);
+        const rad = progress * g.r * 0.75;
+        const a = t + armAngle;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad * 0.35;
+        if (t === 0) bgCtx.moveTo(px, py);
+        else bgCtx.lineTo(px, py);
+      }
+      // Tapered line width — thick near core, thin at edges
+      bgCtx.strokeStyle = `hsla(${g.hue + arm * 25}, 65%, 65%, ${g.alpha * 0.7})`;
+      bgCtx.lineWidth = 1.5;
+      bgCtx.stroke();
+
+      // Glow band around arm
+      bgCtx.beginPath();
+      for (let t = 0; t < Math.PI * g.twist; t += 0.04) {
+        const progress = t / (Math.PI * g.twist);
+        const rad = progress * g.r * 0.75;
+        const a = t + armAngle;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad * 0.35;
+        if (t === 0) bgCtx.moveTo(px, py);
+        else bgCtx.lineTo(px, py);
+      }
+      bgCtx.strokeStyle = `hsla(${g.hue + arm * 25}, 70%, 50%, ${g.alpha * 0.25})`;
+      bgCtx.lineWidth = 8 + Math.sin(Date.now() * 0.0005 + arm) * 2;
+      bgCtx.stroke();
+
+      // Star clusters along arms (pre-generated)
+      g._stars.filter(st => st.arm === arm).forEach(st => {
+        bgCtx.beginPath();
+        bgCtx.arc(st.px, st.py, st.sr, 0, Math.PI * 2);
+        bgCtx.fillStyle = `hsla(${g.hue + arm * 25 + 10}, 80%, ${70 + st.shine * 20}%, ${g.alpha * st.shine})`;
+        bgCtx.fill();
+      });
+    }
+
+    // Core glow — bright center
+    for (let c = 0; c < 3; c++) {
+      const cSize = g.r * (0.08 + c * 0.08);
+      const coreGrad = bgCtx.createRadialGradient(0, 0, 0, 0, 0, cSize);
+      coreGrad.addColorStop(0, `hsla(${g.hue}, 90%, ${85 - c * 10}%, ${g.alpha * (0.8 - c * 0.25)})`);
+      coreGrad.addColorStop(1, 'transparent');
+      bgCtx.fillStyle = coreGrad;
+      bgCtx.beginPath();
+      bgCtx.arc(0, 0, cSize, 0, Math.PI * 2);
+      bgCtx.fill();
+    }
+
+    bgCtx.restore();
+  });
+
+  // Stars
+  starLayers.forEach(layer => {
+    layer.stars.forEach(s => {
+      const a = s.alpha * (0.7 + 0.3 * Math.sin(Date.now() * s.twinkleSpeed + s.twinklePhase));
+      bgCtx.beginPath();
+      bgCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      bgCtx.fillStyle = `rgba(255,255,255,${a})`;
+      bgCtx.fill();
+
+      // glow on bigger stars
+      if (s.r > 1.5) {
+        bgCtx.beginPath();
+        bgCtx.arc(s.x, s.y, s.r * 3, 0, Math.PI * 2);
+        bgCtx.fillStyle = `rgba(200,220,255,${a * 0.08})`;
+        bgCtx.fill();
+      }
+    });
+  });
+
+  // Shooting stars
+  if (Math.random() < 0.003) {
+    shootingStars.push({
+      x: Math.random() * width * 0.8, y: Math.random() * height * 0.4,
+      len: 40 + Math.random() * 80, speed: 6 + Math.random() * 4,
+      angle: Math.PI / 4 + Math.random() * 0.3,
+      life: 1, decay: 0.02 + Math.random() * 0.02,
+    });
+  }
+  shootingStars = shootingStars.filter(s => s.life > 0);
+  shootingStars.forEach(s => {
+    const sx = s.x, sy = s.y;
+    s.x += Math.cos(s.angle) * s.speed;
+    s.y += Math.sin(s.angle) * s.speed;
+    s.life -= s.decay;
+
+    bgCtx.beginPath();
+    bgCtx.moveTo(sx, sy);
+    bgCtx.lineTo(s.x - Math.cos(s.angle) * s.len, s.y - Math.sin(s.angle) * s.len);
+    bgCtx.strokeStyle = `rgba(255,255,255,${s.life * 0.6})`;
+    bgCtx.lineWidth = 1.5 * s.life;
+    bgCtx.stroke();
+  });
+
+  requestAnimationFrame(drawBg);
+}
+
+resizeBg();
+window.addEventListener('resize', resizeBg);
+drawBg();
+
+// ====== CHEAT: быстрые тапы по счётчику ======
+let cheatTaps = 0;
+let cheatTimer = null;
+document.getElementById('dustDisplay').addEventListener('pointerdown', function(e) {
+  cheatTaps++;
+  if (cheatTaps === 1) {
+    cheatTimer = setTimeout(() => { cheatTaps = 0; }, 2000);
+  }
+  if (cheatTaps >= 7) {
+    cheatTaps = 0;
+    clearTimeout(cheatTimer);
+    dust += 1000000;
+    spawnParticle(window.innerWidth/2, window.innerHeight/2 - 80, '✨+1M');
+    spawnParticle(window.innerWidth/2 + 30, window.innerHeight/2 - 100, 'ЧИТ');
+    updateUI();
+    saveGame();
+  }
+});
+
+// ====== CHEAT CLICKS: 7 тапов по счётчику кликов = сброс прогресса ======
+let clickCheatTaps = 0;
+let clickCheatTimer = null;
+document.getElementById('clickDisplay').addEventListener('pointerdown', function(e) {
+  clickCheatTaps++;
+  if (clickCheatTaps === 1) {
+    clickCheatTimer = setTimeout(() => { clickCheatTaps = 0; }, 2000);
+  }
+  if (clickCheatTaps >= 7) {
+    clickCheatTaps = 0;
+    clearTimeout(clickCheatTimer);
+    // Show cheat overlay
+    const overlay = document.getElementById('cheatOverlay');
+    overlay.classList.add('show');
+    setTimeout(() => overlay.classList.remove('show'), 2500);
+    document.getElementById('swipeHint').style.opacity = '';
+    boostTimer = 0;
+    document.getElementById('boostBadge').classList.remove('active');
+    updateUI();
+    saveGame();
+  }
+});
+
+// ====== GAME LOOP ======
+function gameTick() {
+  const mult = boostTimer > 0 ? 2 : 1;
+  dust += autoRate * mult / 10;
+
+  if (boostTimer > 0) {
+    boostTimer -= 0.1;
+    if (boostTimer <= 0) {
+      boostTimer = 0;
+      document.getElementById('boostBadge').classList.remove('active');
+      // Restore skin glow
+      const curSkin = SKINS.find(s => s.id === activeSkin);
+      if (curSkin) {
+        document.getElementById('planetGlow').style.background =
+          `radial-gradient(circle, ${curSkin.glow} 0%, ${curSkin.glow.replace('0.25', '0.08')} 50%, transparent 70%)`;
+        document.getElementById('planetGlowRotate').style.background =
+          `conic-gradient(from 0deg, transparent, ${curSkin.glow2 || 'rgba(74,144,217,0.04)'}, transparent, ${curSkin.glow2 || 'rgba(74,144,217,0.04)'}, transparent)`;
+      }
+      document.getElementById('swipeHint').style.opacity = '';
+    }
+  }
+
+  updateUI();
+  upgradeRenderCounter++;
+  if (upgradeRenderCounter >= 5) {
+    upgradeRenderCounter = 0;
+    renderUpgrades();
+    if (currentTab === 'skins') renderSkins();
+  }
+}
+
+// ====== PANEL TOGGLE ======
+let panelOpen = true;
+document.getElementById('panelToggle').addEventListener('click', () => {
+  panelOpen = !panelOpen;
+  const panel = document.getElementById('bottomPanel');
+  const arrow = document.getElementById('panelArrow');
+  if (panelOpen) {
+    panel.style.transform = '';
+    arrow.classList.remove('open');
+  } else {
+    panel.style.transform = 'translateY(calc(100% - 46px))';
+    arrow.classList.add('open');
+  }
+});
+
+// ====== INIT ======
+setInterval(gameTick, 100);
+setInterval(saveGame, 5000);
+loadGame();
+updateUI();
+renderUpgrades();
+renderLeaders();
+// Load saved skin
+const savedSkin = localStorage.getItem('sd_skin');
+if (savedSkin && SKINS.find(s => s.id === savedSkin)) applySkin(savedSkin);
+// Load saved accessory
+const savedAcc = localStorage.getItem('sd_accessory');
+if (savedAcc && ACCESSORIES.find(a => a.id === savedAcc)) applyAccessory(savedAcc);
+
+// Block touchmove only on game area, not on scrollable panels
+document.getElementById('clickArea').addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+document.getElementById('bgCanvas').addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+</script>
+</body>
+</html>
