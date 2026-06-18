@@ -45,6 +45,35 @@
     font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 1px;
     font-weight: 400;
   }
+  /* v2 button between stat cards */
+  .v2-enter-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 10px 12px; border-radius: 18px; cursor: pointer;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3); transition: all 0.2s; flex-shrink: 0;
+  }
+  .v2-enter-btn.unlocked {
+    background: rgba(255,215,0,0.07); border-color: rgba(255,215,0,0.18);
+    box-shadow: 0 0 20px rgba(255,215,0,0.08);
+  }
+  .v2-enter-btn:active { transform: scale(0.94); }
+  .v2-enter-icon { font-size: 22px; line-height: 1; }
+  .v2-enter-label {
+    font-size: 8px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; color: rgba(255,255,255,0.25);
+  }
+  .v2-enter-btn.unlocked .v2-enter-label { color: #ffd700; }
+  /* Toast notification */
+  .toast-notif {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+    background: rgba(255,60,80,0.15); border: 1px solid rgba(255,60,80,0.3);
+    backdrop-filter: blur(16px); color: #ff6688; font-size: 12px; font-weight: 700;
+    padding: 10px 20px; border-radius: 20px; z-index: 200; white-space: nowrap;
+    opacity: 0; transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1); pointer-events: none;
+  }
+  .toast-notif.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
   .stat-card.right { text-align: right; }
   .stat-card.right .value {
     font-size: 20px;
@@ -716,6 +745,167 @@
     letter-spacing: 1px; text-transform: uppercase;
   }
 
+  /* ---- V2 CASINO ---- */
+  .v2-casino {
+    display: flex; flex-direction: column; gap: 0;
+    max-height: 34dvh; overflow: hidden;
+  }
+  .v2-header {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 6px 12px 8px; font-size: 15px; font-weight: 800;
+    color: #ffd700;
+  }
+  .v2-coins-val { font-size: 20px; }
+  .v2-subtabs {
+    display: flex; gap: 4px; padding: 0 4px 8px;
+    overflow-x: auto; scrollbar-width: none; touch-action: pan-x;
+  }
+  .v2-subtabs::-webkit-scrollbar { display: none; }
+  .v2-stab {
+    flex: 0 0 auto; padding: 6px 12px; border-radius: 10px; font-size: 10px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;
+    color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: all 0.2s;
+  }
+  .v2-stab.active {
+    color: #ffd700; background: rgba(255,215,0,0.07); border-color: rgba(255,215,0,0.15);
+  }
+  .v2-panel {
+    overflow-y: auto; overflow-x: hidden; max-height: 26dvh;
+    touch-action: pan-y; -webkit-overflow-scrolling: touch; padding: 0 2px 4px;
+  }
+  /* Cases */
+  .case-grid {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .case-card {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 12px 14px; cursor: pointer;
+    transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .case-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--cc,rgba(255,215,0,0.04)), transparent);
+    pointer-events: none;
+  }
+  .case-card:active { transform: scale(0.98); }
+  .case-icon { font-size: 36px; flex-shrink: 0; }
+  .case-info { flex: 1; }
+  .case-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; color: var(--cc2,#ffd700); }
+  .case-desc { font-size: 10px; color: rgba(255,255,255,0.35); }
+  .case-cost { font-size: 13px; font-weight: 800; color: #ffd700; white-space: nowrap; }
+  /* Case opening modal */
+  .case-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    backdrop-filter: blur(8px);
+  }
+  .case-overlay.show { opacity: 1; pointer-events: all; }
+  .case-modal {
+    background: rgba(12,10,28,0.97); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px; padding: 20px 16px; width: min(340px, 90vw);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  }
+  .cm-title { font-size: 15px; font-weight: 800; color: rgba(255,255,255,0.7);
+    text-transform: uppercase; letter-spacing: 2px; }
+  .cm-reel-wrap {
+    width: 100%; height: 88px; overflow: hidden; position: relative;
+    border-radius: 14px; background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .cm-reel-wrap::before, .cm-reel-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 2; pointer-events: none;
+  }
+  .cm-reel-wrap::before { left: 0; background: linear-gradient(to right, rgba(12,10,28,0.95), transparent); }
+  .cm-reel-wrap::after  { right: 0; background: linear-gradient(to left, rgba(12,10,28,0.95), transparent); }
+  .cm-center-line {
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
+    background: linear-gradient(to bottom, transparent, #ffd700, transparent);
+    transform: translateX(-50%); z-index: 3; pointer-events: none;
+  }
+  .cm-reel {
+    display: flex; align-items: center; will-change: transform; height: 100%; padding: 0 50%;
+  }
+  .cm-reel-item {
+    flex-shrink: 0; width: 76px; height: 76px; margin: 0 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.03); font-size: 28px; gap: 2px;
+  }
+  .cm-reel-item .ri-name { font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; opacity: 0.6; }
+  .cm-result { font-size: 14px; font-weight: 800; padding: 10px 16px; border-radius: 12px;
+    opacity: 0; transform: scale(0.8); transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    min-height: 42px; text-align: center; }
+  .cm-result.show { opacity: 1; transform: scale(1); }
+  .cm-result.win { color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); }
+  .cm-open-btn {
+    width: 100%; padding: 14px; border-radius: 14px; font-size: 14px; font-weight: 800;
+    border: none; cursor: pointer; transition: all 0.2s;
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,180,0,0.08));
+    border: 1px solid rgba(255,215,0,0.25); color: #ffd700;
+  }
+  .cm-open-btn:active { transform: scale(0.97); }
+  .cm-open-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+  .cm-close { font-size: 12px; color: rgba(255,255,255,0.2); cursor: pointer; padding: 6px 20px; }
+  /* Rocket game */
+  .rocket-game {
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 0;
+  }
+  .rocket-screen {
+    width: 100%; height: 130px; background: rgba(0,0,0,0.3);
+    border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);
+    position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  .rocket-mult {
+    font-size: 46px; font-weight: 900; color: #00ff88;
+    text-shadow: 0 0 30px rgba(0,255,136,0.5);
+    transition: color 0.3s;
+    position: relative; z-index: 2;
+  }
+  .rocket-mult.crashed { color: #ff4466; text-shadow: 0 0 30px rgba(255,60,80,0.5); }
+  .rocket-emoji {
+    position: absolute; font-size: 28px; z-index: 2;
+    transition: bottom 0.1s, left 0.1s;
+    filter: drop-shadow(0 0 8px rgba(255,200,0,0.6));
+  }
+  .rocket-trail {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 0;
+    background: linear-gradient(to top, rgba(0,255,136,0.06), transparent);
+    transition: height 0.1s;
+  }
+  .rocket-phase {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 2px; color: rgba(255,255,255,0.3); text-align: center;
+  }
+  .rocket-controls {
+    display: flex; gap: 8px; width: 100%; align-items: center;
+  }
+  .rocket-bet-input {
+    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px 12px; color: #ffd700; font-size: 14px; font-weight: 700;
+    outline: none; text-align: center;
+  }
+  .rocket-btn {
+    padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 800;
+    border: none; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .rocket-btn-bet {
+    background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.2); color: #ffd700;
+  }
+  .rocket-btn-cash {
+    background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.25); color: #00ff88;
+  }
+  .rocket-btn-cash:disabled, .rocket-btn-bet:disabled { opacity: 0.3; cursor: not-allowed; }
+  .rocket-btn:active:not(:disabled) { transform: scale(0.96); }
+  .rocket-stats {
+    display: flex; gap: 12px; font-size: 11px; color: rgba(255,255,255,0.3); justify-content: center;
+  }
+  .rocket-stats span b { color: rgba(255,255,255,0.7); }
+
   /* Accessories UI in skins tab */
   .acc-section {
     margin-top: 8px; padding-top: 8px;
@@ -931,12 +1121,17 @@
     <div class="value" id="dustDisplay">0</div>
     <div class="sub" id="epsDisplay">0 /сек</div>
   </div>
+  <div class="v2-enter-btn" id="v2EnterBtn">
+    <div class="v2-enter-icon">🔒</div>
+    <div class="v2-enter-label">v2</div>
+  </div>
   <div class="stat-card right">
     <div class="label">Всего кликов</div>
     <div class="value" id="clickDisplay">0</div>
     <div class="sub" id="levelDisplay">Stellar Dust</div>
   </div>
 </div>
+<div class="toast-notif" id="toastNotif"></div>
 
 <div class="center-area" id="clickArea">
   <div class="planet-wrap">
@@ -982,7 +1177,7 @@
     <div class="panel-tab" data-tab="leaders">🏆 Лидеры</div>
     <div class="panel-tab" data-tab="skins">🎨 Скины</div>
     <div class="panel-tab" data-tab="accs">💎 Аксессуары</div>
-    <div class="panel-tab v2-tab" data-tab="v2">🔒 v2</div>
+    <div class="panel-tab v2-tab" id="v2TabBtn" data-tab="v2">🔒 v2</div>
   </div>
   <div class="upgrades-list" id="upgradesList"></div>
   <div class="shop-content" id="shopContent" style="display:none;"><div class="shop-grid" id="shopGrid"></div></div>
@@ -1591,6 +1786,7 @@ function updateUI() {
   const titles = ['Stellar Dust', 'Космический collector', 'Звёздный барон', 'Галактический магнат', 'Повелитель пыли', 'Создатель звёзд'];
   const idx = Math.min(Math.floor(totalClicks / 500), titles.length - 1);
   document.getElementById('levelDisplay').textContent = titles[idx];
+  updateV2Btn();
 }
 
 // ====== BACKGROUND CANVAS ======
@@ -2130,6 +2326,45 @@ function applyShopItem(item) {
 document.getElementById('umBuyBtn').addEventListener('click', () => { if (_upgradeItem) doBuy(_upgradeItem); });
 document.getElementById('umUpgBtn').addEventListener('click', () => { if (_upgradeItem) doUpgrade(_upgradeItem); });
 document.getElementById('umClose').addEventListener('click', () => { document.getElementById('upgradeOverlay').classList.remove('show'); });
+
+// ====== V2 UNLOCK BUTTON ======
+const V2_UNLOCK_COST = 5000;
+let _toastTimer = null;
+
+function showToast(msg) {
+  const el = document.getElementById('toastNotif');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function updateV2Btn() {
+  const btn = document.getElementById('v2EnterBtn');
+  const unlocked = totalClicks >= V2_UNLOCK_COST;
+  const icon = btn.querySelector('.v2-enter-icon');
+  const lbl  = btn.querySelector('.v2-enter-label');
+  if (unlocked) {
+    btn.classList.add('unlocked');
+    icon.textContent = '🎰';
+    lbl.textContent  = 'v2';
+  } else {
+    btn.classList.remove('unlocked');
+    icon.textContent = '🔒';
+    lbl.textContent  = 'v2';
+  }
+}
+
+document.getElementById('v2EnterBtn').addEventListener('click', () => {
+  if (totalClicks < V2_UNLOCK_COST) {
+    const need = V2_UNLOCK_COST - totalClicks;
+    showToast(`🔒 Не хватает ${formatNum(need)} кликов для v2`);
+    return;
+  }
+  // Switch to v2 tab
+  const v2Tab = document.querySelector('.panel-tab[data-tab="v2"]');
+  if (v2Tab) v2Tab.click();
+});
 
 // ====== PANEL TOGGLE ======
 let panelOpen = true;
