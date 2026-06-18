@@ -9,7 +9,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
   body {
     background: #060612; color: #fff; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    overflow: hidden; height: 100dvh; width: 100vw; touch-action: none;
+    overflow: hidden; height: 100dvh; width: 100vw; touch-action: pan-y;
     display: flex; flex-direction: column;
   }
 
@@ -300,6 +300,7 @@
   .panel-tabs {
     display: flex; gap: 4px; padding: 0 6px 10px;
     overflow-x: auto; scrollbar-width: none;
+    touch-action: pan-x;
   }
   .panel-tabs::-webkit-scrollbar { display: none; }
   .panel-tab {
@@ -728,6 +729,7 @@
     display: flex; gap: 6px; overflow-x: auto;
     padding: 2px 0; scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.05) transparent;
+    touch-action: pan-x;
   }
   .acc-row::-webkit-scrollbar { height: 2px; }
   .acc-row::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
@@ -1374,7 +1376,8 @@ function renderSkins() {
       ${statusHtml}
     `;
 
-    div.addEventListener('click', () => {
+    div.addEventListener('pointerdown', e => {
+      e.preventDefault();
       if (isActive) return;
       if (owned) { applySkin(s.id); renderSkins(); return; }
       openSkinModal(s);
@@ -1411,7 +1414,7 @@ function renderAccTab() {
     item.className = 'acc-item' + (isActive ? ' active' : '') + (!unlocked ? ' locked' : '');
     item.innerHTML = a.icon + ' ' + a.name + '<div style="font-size:9px;opacity:0.4;margin-top:2px;">' + a.desc + '</div>';
     if (unlocked) {
-      item.addEventListener('click', () => { applyAccessory(a.id); renderAccTab(); });
+      item.addEventListener('pointerdown', e => { e.preventDefault(); applyAccessory(a.id); renderAccTab(); });
     }
     row.appendChild(item);
   });
@@ -2162,29 +2165,28 @@ const TAB_ORDER = ['upgrades', 'shop', 'leaders', 'skins', 'accs', 'v2'];
 let _swipeStartX = 0, _swipeStartY = 0, _swipeBlocked = false;
 const _panel = document.getElementById('bottomPanel');
 
-function _isInsideHScrollable(el) {
-  while (el && el !== _panel) {
-    const style = window.getComputedStyle(el);
-    const overflow = style.overflowX;
-    if ((overflow === 'auto' || overflow === 'scroll') && el.scrollWidth > el.clientWidth + 2) return true;
-    el = el.parentElement;
-  }
-  return false;
-}
-
 _panel.addEventListener('touchstart', e => {
   _swipeStartX = e.touches[0].clientX;
   _swipeStartY = e.touches[0].clientY;
-  _swipeBlocked = _isInsideHScrollable(e.target);
+  // Block if touch starts inside a known horizontal-scroll container
+  _swipeBlocked = !!e.target.closest('.acc-row, .panel-tabs');
+}, { passive: true });
+
+_panel.addEventListener('touchmove', e => {
+  if (_swipeBlocked) return;
+  const dx = Math.abs(e.touches[0].clientX - _swipeStartX);
+  const dy = Math.abs(e.touches[0].clientY - _swipeStartY);
+  // If vertical intent is clear, block tab switch
+  if (dy > 12 && dy > dx * 1.2) _swipeBlocked = true;
 }, { passive: true });
 
 _panel.addEventListener('touchend', e => {
   if (_swipeBlocked) return;
   const dx = e.changedTouches[0].clientX - _swipeStartX;
   const dy = e.changedTouches[0].clientY - _swipeStartY;
-  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
   const idx = TAB_ORDER.indexOf(currentTab);
-  let next = idx + (dx < 0 ? 1 : -1);
+  const next = idx + (dx < 0 ? 1 : -1);
   if (next < 0 || next >= TAB_ORDER.length) return;
   const targetTab = document.querySelector(`.panel-tab[data-tab="${TAB_ORDER[next]}"]`);
   if (targetTab) {
