@@ -1192,6 +1192,15 @@ function activateBoost() {
   }
 }
 
+// Tap helper: fires instantly on touchend if movement < 10px, no preventDefault → scroll works
+function onTap(el, cb) {
+  let sx = 0, sy = 0;
+  el.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (Math.abs(e.changedTouches[0].clientX - sx) < 10 && Math.abs(e.changedTouches[0].clientY - sy) < 10) cb(e);
+  }, { passive: true });
+}
+
 // ====== UPGRADES UI ======
 const upgradesList = document.getElementById('upgradesList');
 
@@ -1229,10 +1238,7 @@ function renderUpgrades() {
     `;
 
     if (!maxed) {
-      div.addEventListener('click', () => {
-        if (u.id === 'boost') return;
-        buyUpgrade(u.id);
-      });
+      onTap(div, () => { if (u.id !== 'boost') buyUpgrade(u.id); });
     }
     upgradesList.appendChild(div);
   });
@@ -1375,7 +1381,7 @@ function renderSkins() {
       ${statusHtml}
     `;
 
-    div.addEventListener('click', () => {
+    onTap(div, () => {
       if (isActive) return;
       if (owned) { applySkin(s.id); renderSkins(); return; }
       openSkinModal(s);
@@ -1412,7 +1418,7 @@ function renderAccTab() {
     item.className = 'acc-item' + (isActive ? ' active' : '') + (!unlocked ? ' locked' : '');
     item.innerHTML = a.icon + ' ' + a.name + '<div style="font-size:9px;opacity:0.4;margin-top:2px;">' + a.desc + '</div>';
     if (unlocked) {
-      item.addEventListener('click', () => { applyAccessory(a.id); renderAccTab(); });
+      onTap(item, () => { applyAccessory(a.id); renderAccTab(); });
     }
     row.appendChild(item);
   });
@@ -1933,7 +1939,7 @@ function renderShop() {
       <div class="sc-rarity">${ri.name}</div>
       ${owned ? '<div class="sc-owned">✓ Получено</div><div class="sc-badge">✓</div>' : `<div class="sc-cost">👆 ${formatNum(item.cost)}</div>`}
     `;
-    card.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); openUpgradeModal(item); });
+    onTap(card, () => openUpgradeModal(item));
     grid.appendChild(card);
   });
 }
