@@ -1229,8 +1229,7 @@ function renderUpgrades() {
     `;
 
     if (!maxed) {
-      div.addEventListener('pointerdown', e => {
-        e.preventDefault(); e.stopPropagation();
+      div.addEventListener('click', () => {
         if (u.id === 'boost') return;
         buyUpgrade(u.id);
       });
@@ -1351,7 +1350,7 @@ function renderSkins() {
   const grid = document.getElementById('skinsList');
   grid.innerHTML = '';
   SKINS.forEach(s => {
-    const owned = !!skinInventory[s.id];
+    const owned = !!(skinInventory[s.id] || shopInventory[s.id]);
     const isActive = activeSkin === s.id;
     const ri = RARITY_INFO[s.rarity] || RARITY_INFO.common;
     const div = document.createElement('div');
@@ -1376,8 +1375,7 @@ function renderSkins() {
       ${statusHtml}
     `;
 
-    div.addEventListener('pointerdown', e => {
-      e.preventDefault();
+    div.addEventListener('click', () => {
       if (isActive) return;
       if (owned) { applySkin(s.id); renderSkins(); return; }
       openSkinModal(s);
@@ -1414,7 +1412,7 @@ function renderAccTab() {
     item.className = 'acc-item' + (isActive ? ' active' : '') + (!unlocked ? ' locked' : '');
     item.innerHTML = a.icon + ' ' + a.name + '<div style="font-size:9px;opacity:0.4;margin-top:2px;">' + a.desc + '</div>';
     if (unlocked) {
-      item.addEventListener('pointerdown', e => { e.preventDefault(); applyAccessory(a.id); renderAccTab(); });
+      item.addEventListener('click', () => { applyAccessory(a.id); renderAccTab(); });
     }
     row.appendChild(item);
   });
@@ -2103,6 +2101,10 @@ function _grantItem(item) {
   } else {
     shopInventory[item.id] = true;
     applyShopItem(item);
+    if (item.type === 'skin') {
+      skinInventory[item.id] = true;
+      applySkin(item.id);
+    }
   }
 }
 
